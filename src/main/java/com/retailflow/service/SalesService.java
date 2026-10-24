@@ -14,12 +14,17 @@ public class SalesService {
   private final SaleRepository sales;
   private final ProductRepository products;
   private final SettingsRepository settings;
+  private final LiveEventService events;
 
   public SalesService(
-      SaleRepository sales, ProductRepository products, SettingsRepository settings) {
+      SaleRepository sales,
+      ProductRepository products,
+      SettingsRepository settings,
+      LiveEventService events) {
     this.sales = sales;
     this.products = products;
     this.settings = settings;
+    this.events = events;
   }
 
   public List<Sale> list(OffsetDateTime from, OffsetDateTime to) {
@@ -73,6 +78,20 @@ public class SalesService {
     }
     s.totalUsd = total.setScale(4, RoundingMode.HALF_UP);
     s.totalKhr = com.retailflow.util.MoneyUtil.toKhr(total, rate);
-    return sales.saveAndFlush(s);
+    Sale saved = sales.saveAndFlush(s);
+    String shortId = saved.id.toString().substring(0, 8).toUpperCase();
+    events.push(
+        "CHECKOUT",
+        "Checkout #" + shortId,
+        "ទំនិញបានទូទាត់ #" + shortId,
+        String.format("%,d ៛ · %d items", saved.totalKhr.longValue(), saved.items.size()),
+        null,
+        saved);
+    return saved;
+  }
+
+  @Transactional
+  public void delete(UUID id) {
+    sales.findById(id).ifPresent(sales::delete);
   }
 }

@@ -18,8 +18,12 @@ public class AuthFilter extends OncePerRequestFilter {
 
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {
+    if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+      return true;
+    }
     String path = request.getRequestURI();
     return !path.startsWith("/api/")
+        || path.equals("/api/health")
         || path.equals("/api/auth/login")
         || path.equals("/api/auth/refresh")
         || path.equals("/api/auth/logout");

@@ -33,4 +33,11 @@ public class SalesController {
   public Sale checkout(@Valid @RequestBody CheckoutRequest input) {
     return service.checkout(input);
   }
+
+  @DeleteMapping("/{id}")
+  @org.springframework.web.bind.annotation.ResponseStatus(
+      org.springframework.http.HttpStatus.NO_CONTENT)
+  public void delete(@PathVariable UUID id) {
+    service.delete(id);
+  }
 }

@@ -17,16 +17,19 @@ public class ProductService {
   private final StockMovementRepository movements;
   private final SettingsRepository settings;
   private final ImageStorageService images;
+  private final LiveEventService events;
 
   public ProductService(
       ProductRepository repo,
       StockMovementRepository movements,
       SettingsRepository settings,
-      ImageStorageService images) {
+      ImageStorageService images,
+      LiveEventService events) {
     this.repo = repo;
     this.movements = movements;
     this.settings = settings;
     this.images = images;
+    this.events = events;
   }
 
   public List<Product> list() {
@@ -130,7 +133,16 @@ public class ProductService {
             in.lowStockThreshold(),
             "INITIAL");
     product.expirationDate = in.expirationDate();
-    return repo.save(product);
+    Product saved = repo.save(product);
+    BigDecimal khrPrice = MoneyUtil.toKhr(saved.priceUsd, rate());
+    events.push(
+        "PRODUCT_ADDED",
+        "New Product Added: " + saved.name,
+        "បានបន្ថែមទំនិញថ្មី៖ " + saved.name,
+        String.format("%,d ៛ · Stock: %d", khrPrice.longValue(), saved.stock),
+        saved.id.toString(),
+        null);
+    return saved;
   }
 
   /**
@@ -157,7 +169,16 @@ public class ProductService {
       p.stock = in.stock();
       movements.save(new StockMovement(p.id, delta, "MANUAL_EDIT", null));
     }
-    return repo.save(p);
+    Product saved = repo.save(p);
+    BigDecimal khrPrice = MoneyUtil.toKhr(saved.priceUsd, rate());
+    events.push(
+        "PRODUCT_UPDATED",
+        "Product Updated: " + saved.name,
+        "បានកែប្រែទំនិញ៖ " + saved.name,
+        String.format("%,d ៛ · Stock: %d", khrPrice.longValue(), saved.stock),
+        saved.id.toString(),
+        null);
+    return saved;
   }
 
   @Transactional
@@ -166,7 +187,15 @@ public class ProductService {
     if (p.archived) throw new IllegalArgumentException("Archived product");
     p.stock = Math.addExact(p.stock, in.quantity());
     movements.save(new StockMovement(p.id, in.quantity(), "RESTOCK", null));
-    return repo.save(p);
+    Product saved = repo.save(p);
+    events.push(
+        "PRODUCT_UPDATED",
+        "Restocked: " + saved.name + " (+" + in.quantity() + ")",
+        "បានបន្ថែមស្តុក៖ " + saved.name + " (+" + in.quantity() + ")",
+        "Stock: " + saved.stock,
+        saved.id.toString(),
+        null);
+    return saved;
   }
 
   @Transactional
