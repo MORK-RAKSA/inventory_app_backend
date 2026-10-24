@@ -1,0 +1,9 @@
+{
+  "name": "easysell-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "គ្រប់ហាង · EasySell Backend API for Vercel",
+  "engines": {
+    "node": ">=18.x"
+  }
+}
