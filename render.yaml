@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: easysell-h2-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    disk:
+      name: h2-data
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: DB_URL
+        value: jdbc:h2:file:/app/data/retailflow;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+      - key: RETAILFLOW_USERNAME
+        value: morkraksa
+      - key: RETAILFLOW_PASSWORD
+        value: admin1234
