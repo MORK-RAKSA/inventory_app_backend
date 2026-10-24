@@ -41,6 +41,14 @@ public class Product {
   @Column(name = "expiration_date")
   public java.time.LocalDate expirationDate;
 
+  /** Wholesale unit price in USD. Null = no wholesale price (wholesale checkout falls back to retail). */
+  @Column(name = "wholesale_price_usd")
+  public BigDecimal wholesalePriceUsd;
+
+  /** Minimum quantity per line for the wholesale price to be recommended. */
+  @Column(name = "wholesale_min_qty")
+  public int wholesaleMinQty = 1;
+
   public boolean archived;
   @Version public long version;
 

@@ -69,6 +69,16 @@ public class ProductService {
     p.lowStockThreshold = threshold;
   }
 
+  /** Copies the optional wholesale price (same currency as the retail price) and minimum quantity. */
+  private void applyWholesale(Product p, ProductInput in) {
+    if (in.wholesalePrice() == null || in.wholesalePrice().signum() <= 0) {
+      p.wholesalePriceUsd = null;
+    } else {
+      p.wholesalePriceUsd = MoneyUtil.toUsd(in.wholesalePrice(), in.currency(), rate());
+    }
+    p.wholesaleMinQty = in.wholesaleMinQty() == null ? 1 : Math.max(1, in.wholesaleMinQty());
+  }
+
   private Product newProduct(
       String name,
       String barcode,
@@ -114,6 +124,7 @@ public class ProductService {
       if (existing.isPresent()) {
         Product p = existing.get();
         applyDetails(p, in.name(), in.category(), in.price(), in.currency(), in.lowStockThreshold());
+        applyWholesale(p, in);
         if (in.expirationDate() != null) p.expirationDate = in.expirationDate();
         if (in.stock() > 0) {
           p.stock = Math.addExact(p.stock, in.stock());
@@ -133,6 +144,7 @@ public class ProductService {
             in.lowStockThreshold(),
             "INITIAL");
     product.expirationDate = in.expirationDate();
+    applyWholesale(product, in);
     Product saved = repo.save(product);
     BigDecimal khrPrice = MoneyUtil.toKhr(saved.priceUsd, rate());
     events.push(
@@ -157,6 +169,7 @@ public class ProductService {
             .filter(x -> !x.archived)
             .orElseThrow(() -> new NotFoundException("Product not found"));
     applyDetails(p, in.name(), in.category(), in.price(), in.currency(), in.lowStockThreshold());
+    applyWholesale(p, in);
     p.expirationDate = in.expirationDate();
     String code = cleanBarcode(in.barcode());
     if (p.barcode == null && code != null) {

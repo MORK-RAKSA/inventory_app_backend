@@ -30,6 +30,10 @@ public class Sale {
 
   public String status;
 
+  /** RETAIL or WHOLESALE — which price list this sale was charged at. */
+  @Column(name = "price_tier")
+  public String priceTier = "RETAIL";
+
   @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   @OrderBy("productName asc")
   public List<SaleItem> items = new ArrayList<>();

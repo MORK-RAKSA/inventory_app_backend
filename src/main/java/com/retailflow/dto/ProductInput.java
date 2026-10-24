@@ -11,4 +11,7 @@ public record ProductInput(
     @NotBlank String currency,
     @Min(0) int stock,
     @Min(0) int lowStockThreshold,
-    java.time.LocalDate expirationDate) {}
+    java.time.LocalDate expirationDate,
+    /** Optional wholesale price, expressed in the same {@code currency} as {@code price}. */
+    @DecimalMin("0") BigDecimal wholesalePrice,
+    @Min(1) Integer wholesaleMinQty) {}

@@ -10,6 +10,18 @@ function roundKhr(n) {
   return Math.max(100, Math.round(val / 100) * 100);
 }
 
+/** Converts an optional wholesale price (same currency as the retail price) to USD, or null. */
+function wholesaleUsd(body, ccy, rate, fallback) {
+  if (body.wholesalePrice === undefined && body.wholesalePriceUsd === undefined) {
+    return fallback === undefined ? null : fallback;
+  }
+  const raw = Number(body.wholesalePrice ?? body.wholesalePriceUsd ?? 0) || 0;
+  if (raw <= 0) return null;
+  return ccy === 'KHR'
+    ? Number((roundKhr(raw) / rate).toFixed(4))
+    : Number(raw.toFixed(4));
+}
+
 function getDefaultDb() {
   return {
     updatedAt: 0,
@@ -520,6 +532,8 @@ module.exports = async function handler(req, res) {
       expirationDate: body.expirationDate || null,
       imageUrl: body.imageUrl || null,
       archived: false,
+      wholesalePriceUsd: wholesaleUsd(body, ccy, rate),
+      wholesaleMinQty: Math.max(1, Math.round(Number(body.wholesaleMinQty) || 1)),
       updatedAtMs: Date.now(),
     };
     db.products.unshift(created);
@@ -612,6 +626,11 @@ module.exports = async function handler(req, res) {
         ),
         expirationDate:
           body.expirationDate !== undefined ? body.expirationDate : db.products[idx].expirationDate,
+        wholesalePriceUsd: wholesaleUsd(body, ccy, rate, db.products[idx].wholesalePriceUsd),
+        wholesaleMinQty:
+          body.wholesaleMinQty !== undefined
+            ? Math.max(1, Math.round(Number(body.wholesaleMinQty) || 1))
+            : db.products[idx].wholesaleMinQty || 1,
         updatedAtMs: Date.now(),
       };
       pushEvent(
@@ -740,6 +759,7 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Cart is empty' });
     }
     const rate = roundKhr(db.settings.usdToKhr || 4100);
+    const wholesale = String(body.priceTier || '').toUpperCase() === 'WHOLESALE';
     const saleItems = [];
     let totalUsd = 0;
 
@@ -754,14 +774,16 @@ module.exports = async function handler(req, res) {
       }
       product.stock -= qty;
       product.updatedAtMs = Date.now();
-      const lineTotalUsd = Number((product.priceUsd * qty).toFixed(2));
+      const unitUsd =
+        wholesale && product.wholesalePriceUsd > 0 ? product.wholesalePriceUsd : product.priceUsd;
+      const lineTotalUsd = Number((unitUsd * qty).toFixed(2));
       totalUsd += lineTotalUsd;
       saleItems.push({
         id: crypto.randomUUID(),
         productId: product.id,
         productName: product.name,
         quantity: qty,
-        unitPriceUsd: product.priceUsd,
+        unitPriceUsd: unitUsd,
         lineTotalUsd,
       });
     }
@@ -774,6 +796,7 @@ module.exports = async function handler(req, res) {
       totalUsd: Number(totalUsd.toFixed(2)),
       totalKhr,
       paidCurrency: body.paidCurrency || 'KHR',
+      priceTier: wholesale ? 'WHOLESALE' : 'RETAIL',
       status: 'COMPLETED',
       items: saleItems,
     };

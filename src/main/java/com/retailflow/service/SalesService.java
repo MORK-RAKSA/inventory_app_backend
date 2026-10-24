@@ -54,6 +54,8 @@ public class SalesService {
     s.paidCurrency = in.paidCurrency();
     s.rateSnapshot = rate;
     s.status = "COMPLETED";
+    boolean wholesale = "WHOLESALE".equalsIgnoreCase(in.priceTier());
+    s.priceTier = wholesale ? "WHOLESALE" : "RETAIL";
     BigDecimal total = BigDecimal.ZERO;
     for (var entry : merged.entrySet()) {
       Product p =
@@ -71,8 +73,11 @@ public class SalesService {
       li.productId = p.id;
       li.productName = p.name;
       li.quantity = qty;
-      li.unitPriceUsd = p.priceUsd;
-      li.lineTotalUsd = p.priceUsd.multiply(BigDecimal.valueOf(qty));
+      li.unitPriceUsd =
+          wholesale && p.wholesalePriceUsd != null && p.wholesalePriceUsd.signum() > 0
+              ? p.wholesalePriceUsd
+              : p.priceUsd;
+      li.lineTotalUsd = li.unitPriceUsd.multiply(BigDecimal.valueOf(qty));
       total = total.add(li.lineTotalUsd);
       s.items.add(li);
     }

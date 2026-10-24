@@ -7,4 +7,6 @@ import java.util.List;
 public record CheckoutRequest(
     @NotBlank String idempotencyKey,
     @NotBlank String paidCurrency,
+    /** "RETAIL" (default) or "WHOLESALE". */
+    String priceTier,
     @NotEmpty List<@Valid CartLine> items) {}
