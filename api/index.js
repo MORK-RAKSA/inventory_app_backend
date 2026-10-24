@@ -283,6 +283,204 @@ module.exports = async function handler(req, res) {
     return res.status(200).json(filtered);
   }
 
+  const barcodeLookupMatch = pathname.match(/^\/api\/barcode-lookup(?:\/(.+))?$/);
+  if (barcodeLookupMatch && req.method === 'GET') {
+    const rawCode = barcodeLookupMatch[1]
+      ? decodeURIComponent(barcodeLookupMatch[1])
+      : urlObj.searchParams.get('code') || '';
+    const clean = rawCode.trim();
+    if (!clean) return res.status(400).json({ error: 'Barcode is required' });
+
+    // 1. Check existing or archived products in DB first
+    const localFound = db.products.find(
+      (p) => String(p.barcode || '').toLowerCase() === clean.toLowerCase()
+    );
+    if (localFound && localFound.name) {
+      return res.status(200).json({
+        barcode: clean,
+        name: localFound.name,
+        category: localFound.category || 'General',
+        imageUrl: localFound.imageUrl || null,
+        source: 'local',
+      });
+    }
+
+    const fetchWithTimeout = async (url, timeoutMs = 4200) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'EasySellPOS/2.0 (https://inventoryappbackend.vercel.app)',
+            Accept: 'application/json, text/html;q=0.8',
+          },
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+
+    const cleanCat = (raw) => {
+      if (!raw) return undefined;
+      const first = String(raw).split(',')[0]?.trim();
+      if (!first) return undefined;
+      const stripped = first.replace(/^[a-z]{2}:/i, '').replace(/-/g, ' ').trim();
+      if (!stripped) return undefined;
+      return stripped.charAt(0).toUpperCase() + stripped.slice(1);
+    };
+
+    const extractOffProduct = (p) => {
+      if (!p || typeof p !== 'object') return null;
+      let rawName = (
+        p.product_name ||
+        p.product_name_en ||
+        p.product_name_km ||
+        p.product_name_th ||
+        p.product_name_vi ||
+        p.product_name_zh ||
+        p.product_name_ja ||
+        p.product_name_ko ||
+        p.product_name_fr ||
+        p.generic_name ||
+        p.generic_name_en ||
+        p.abbreviated_product_name ||
+        ''
+      ).trim();
+
+      if (!rawName) {
+        for (const k of Object.keys(p)) {
+          if (k.startsWith('product_name_') && typeof p[k] === 'string' && p[k].trim()) {
+            rawName = p[k].trim();
+            break;
+          }
+        }
+      }
+      const brand = String(p.brands || '').split(',')[0]?.trim();
+      const qtyLabel = String(p.quantity || '').trim();
+      let name =
+        rawName && brand && !rawName.toLowerCase().includes(brand.toLowerCase())
+          ? `${brand} ${rawName}`
+          : rawName || brand;
+      if (name && qtyLabel && !name.toLowerCase().includes(qtyLabel.toLowerCase())) {
+        name = `${name} ${qtyLabel}`;
+      }
+      if (!name) return null;
+      return {
+        barcode: clean,
+        name,
+        category: cleanCat(p.categories),
+        imageUrl: p.image_front_small_url || p.image_url || p.image_front_url || undefined,
+      };
+    };
+
+    const tasks = [
+      // OpenFoodFacts v0 (returns all language fields)
+      (async () => {
+        const r = await fetchWithTimeout(
+          `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(clean)}.json`
+        );
+        if (!r.ok) return null;
+        const d = await r.json();
+        return d?.status === 1 ? extractOffProduct(d.product) : null;
+      })(),
+      // OpenProductsFacts v0
+      (async () => {
+        const r = await fetchWithTimeout(
+          `https://world.openproductsfacts.org/api/v0/product/${encodeURIComponent(clean)}.json`
+        );
+        if (!r.ok) return null;
+        const d = await r.json();
+        return d?.status === 1 ? extractOffProduct(d.product) : null;
+      })(),
+      // OpenBeautyFacts v0
+      (async () => {
+        const r = await fetchWithTimeout(
+          `https://world.openbeautyfacts.org/api/v0/product/${encodeURIComponent(clean)}.json`
+        );
+        if (!r.ok) return null;
+        const d = await r.json();
+        return d?.status === 1 ? extractOffProduct(d.product) : null;
+      })(),
+      // UPCitemdb trial API
+      (async () => {
+        const r = await fetchWithTimeout(
+          `https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(clean)}`
+        );
+        if (!r.ok) return null;
+        const d = await r.json();
+        const item = d?.items?.[0];
+        if (!item?.title) return null;
+        const title = String(item.title).trim();
+        const brand = String(item.brand || '').trim();
+        const name =
+          brand && !title.toLowerCase().includes(brand.toLowerCase())
+            ? `${brand} ${title}`
+            : title;
+        return {
+          barcode: clean,
+          name,
+          category: cleanCat(item.category),
+          imageUrl: item.images?.[0] || undefined,
+        };
+      })(),
+      // Brocade.io open barcode DB
+      (async () => {
+        const r = await fetchWithTimeout(
+          `https://www.brocade.io/api/items/${encodeURIComponent(clean)}`
+        );
+        if (!r.ok) return null;
+        const d = await r.json();
+        if (!d?.name) return null;
+        const brand = String(d.brand_name || '').trim();
+        const rawName = String(d.name).trim();
+        const size = String(d.size || '').trim();
+        let name =
+          brand && !rawName.toLowerCase().includes(brand.toLowerCase())
+            ? `${brand} ${rawName}`
+            : rawName;
+        if (size && !name.toLowerCase().includes(size.toLowerCase())) {
+          name = `${name} ${size}`;
+        }
+        return {
+          barcode: clean,
+          name,
+        };
+      })(),
+      // Go-UPC HTML title fallback
+      (async () => {
+        const r = await fetchWithTimeout(
+          `https://go-upc.com/search?q=${encodeURIComponent(clean)}`
+        );
+        if (!r.ok) return null;
+        const html = await r.text();
+        const h1Match = html.match(/<h1[^>]*class="[^"]*product-name[^"]*"[^>]*>([\s\S]*?)<\/h1>/i);
+        const rawTitle = h1Match ? h1Match[1].replace(/<[^>]+>/g, '').trim() : '';
+        if (
+          rawTitle &&
+          !rawTitle.toLowerCase().includes('not found') &&
+          !rawTitle.toLowerCase().includes('search results') &&
+          rawTitle !== clean
+        ) {
+          return {
+            barcode: clean,
+            name: rawTitle,
+          };
+        }
+        return null;
+      })(),
+    ];
+
+    const settled = await Promise.allSettled(tasks);
+    for (const s of settled) {
+      if (s.status === 'fulfilled' && s.value && s.value.name) {
+        return res.status(200).json(s.value);
+      }
+    }
+
+    return res.status(404).json({ error: 'Barcode not found in online catalogs' });
+  }
+
   const barcodeMatch = pathname.match(/^\/api\/products\/barcode\/(.+)$/);
   if (barcodeMatch && req.method === 'GET') {
     const code = decodeURIComponent(barcodeMatch[1]).trim().toLowerCase();
