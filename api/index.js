@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const DB_FILE = path.join('/tmp', 'easysell-vercel-db.json');
+const DB_FILE = path.join('/tmp', 'easysell-vercel-db-v2.json');
 
 function roundKhr(n) {
   const val = Number(n);
@@ -12,86 +12,58 @@ function roundKhr(n) {
 
 function getDefaultDb() {
   return {
+    updatedAt: 0,
     settings: {
       usdToKhr: roundKhr(Number(process.env.DEFAULT_USD_TO_KHR || 4100)),
     },
-    products: [
-      {
-        id: '11111111-1111-4111-8111-111111111001',
-        name: 'Angkor Puro Drinking Water 500ml',
-        barcode: '8846000010012',
-        category: 'Beverages',
-        priceUsd: 0.2439,
-        originalCcy: 'KHR',
-        originalPrice: 1000,
-        stock: 120,
-        lowStockThreshold: 15,
-        expirationDate: '2027-06-30',
-        imageUrl: null,
-        archived: false,
-      },
-      {
-        id: '11111111-1111-4111-8111-111111111002',
-        name: 'Cambodia Premium Jasmine Rice 5kg',
-        barcode: '8846000020059',
-        category: 'General',
-        priceUsd: 5.0,
-        originalCcy: 'KHR',
-        originalPrice: 20500,
-        stock: 35,
-        lowStockThreshold: 8,
-        expirationDate: '2027-12-31',
-        imageUrl: null,
-        archived: false,
-      },
-      {
-        id: '11111111-1111-4111-8111-111111111003',
-        name: 'Iced Espresso Canned Coffee 250ml',
-        barcode: '8850228000124',
-        category: 'Beverages',
-        priceUsd: 0.7561,
-        originalCcy: 'KHR',
-        originalPrice: 3100,
-        stock: 48,
-        lowStockThreshold: 10,
-        expirationDate: '2026-11-20',
-        imageUrl: null,
-        archived: false,
-      },
-      {
-        id: '11111111-1111-4111-8111-111111111004',
-        name: 'Crispy Seaweed Snack Pack',
-        barcode: '8858705600121',
-        category: 'Snacks',
-        priceUsd: 0.5122,
-        originalCcy: 'KHR',
-        originalPrice: 2100,
-        stock: 6,
-        lowStockThreshold: 10,
-        expirationDate: '2026-09-15',
-        imageUrl: null,
-        archived: false,
-      },
-    ],
+    // Clean empty inventory — no fake auto-seeded products!
+    products: [],
     sales: [],
+    events: [],
   };
 }
 
+let memoryDb = null;
+
 function loadDb() {
+  if (memoryDb) return memoryDb;
   try {
     if (fs.existsSync(DB_FILE)) {
-      return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+      memoryDb = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+      if (!Array.isArray(memoryDb.events)) memoryDb.events = [];
+      if (typeof memoryDb.updatedAt !== 'number') memoryDb.updatedAt = Date.now();
+      return memoryDb;
     }
   } catch (_) {}
-  const initial = getDefaultDb();
-  saveDb(initial);
-  return initial;
+  memoryDb = getDefaultDb();
+  return memoryDb;
 }
 
-function saveDb(db) {
+function saveDb(db, bumpVersion = true) {
+  if (bumpVersion) {
+    db.updatedAt = Date.now();
+  }
+  memoryDb = db;
   try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
+    fs.writeFileSync(DB_FILE, JSON.stringify(db), 'utf8');
   } catch (_) {}
+}
+
+function pushEvent(db, type, titleEn, titleKh, detail, extra = {}) {
+  if (!Array.isArray(db.events)) db.events = [];
+  const ev = {
+    id: crypto.randomUUID(),
+    type,
+    titleEn,
+    titleKh,
+    detail,
+    createdAt: new Date().toISOString(),
+    timestampMs: Date.now(),
+    ...extra,
+  };
+  db.events.unshift(ev);
+  if (db.events.length > 50) db.events.length = 50;
+  return ev;
 }
 
 function makeToken(username, ttlSeconds) {
@@ -143,7 +115,6 @@ async function readBody(req) {
 }
 
 function normalizePath(rawPath) {
-  // Support both `/api/products` and `/products` so EXPO_PUBLIC_API_URL works with or without `/api` suffix
   if (rawPath === '/' || rawPath === '/api' || rawPath === '/api/') return '/api/health';
   if (!rawPath.startsWith('/api/')) {
     return `/api${rawPath.startsWith('/') ? '' : '/'}${rawPath}`;
@@ -152,10 +123,10 @@ function normalizePath(rawPath) {
 }
 
 module.exports = async function handler(req, res) {
-  // CORS Headers for Web Portal & Mobile App
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Client-Id');
+  res.setHeader('Access-Control-Expose-Headers', 'X-Server-Updated-At');
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
@@ -163,18 +134,90 @@ module.exports = async function handler(req, res) {
 
   const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = normalizePath(urlObj.pathname);
+  const clientId = String(req.headers['x-client-id'] || '');
 
-  // Health Check Endpoint
+  const db = loadDb();
+  res.setHeader('X-Server-Updated-At', String(db.updatedAt || 0));
+
   if (pathname === '/api/health' && req.method === 'GET') {
     return res.status(200).json({
       status: 'UP',
       app: 'គ្រប់ហាង · EasySell Backend API',
-      runtime: 'Vercel Serverless Node.js',
+      updatedAt: db.updatedAt,
       timestamp: new Date().toISOString(),
     });
   }
 
-  const db = loadDb();
+  // ==================== STATE SNAPSHOT & COLD-START RESTORE ====================
+  if (pathname === '/api/state' && req.method === 'GET') {
+    const since = Number(urlObj.searchParams.get('since') || 0);
+    return res.status(200).json({
+      updatedAt: db.updatedAt,
+      settings: { usdToKhr: roundKhr(db.settings.usdToKhr || 4100) },
+      products: db.products.filter((p) => !p.archived),
+      sales: db.sales.filter((s) => s.status !== 'ARCHIVED'),
+      events: since > 0 ? (db.events || []).filter((e) => e.timestampMs > since) : [],
+    });
+  }
+
+  if (pathname === '/api/state/sync' && req.method === 'POST') {
+    const body = await readBody(req);
+    // Merge client's persistent state into a cold-started serverless instance without losing items
+    if (body && typeof body === 'object') {
+      const deletedProdIds = new Set(Array.isArray(body.deletedProductIds) ? body.deletedProductIds : []);
+      const productMap = new Map(db.products.map((p) => [p.id, p]));
+      if (Array.isArray(body.products)) {
+        for (const p of body.products) {
+          if (p && p.id && !deletedProdIds.has(p.id)) {
+            const existing = productMap.get(p.id);
+            if (!existing || (p.updatedAtMs && (!existing.updatedAtMs || p.updatedAtMs >= existing.updatedAtMs))) {
+              productMap.set(p.id, { ...existing, ...p, archived: Boolean(p.archived) });
+            }
+          }
+        }
+      }
+      for (const delId of deletedProdIds) {
+        const existing = productMap.get(delId);
+        if (existing) existing.archived = true;
+      }
+      db.products = Array.from(productMap.values());
+
+      const deletedSaleIds = new Set(Array.isArray(body.deletedSaleIds) ? body.deletedSaleIds : []);
+      const saleMap = new Map(db.sales.map((s) => [s.id, s]));
+      if (Array.isArray(body.sales)) {
+        for (const s of body.sales) {
+          if (s && s.id && !deletedSaleIds.has(s.id) && !saleMap.has(s.id)) {
+            saleMap.set(s.id, s);
+          }
+        }
+      }
+      for (const delSaleId of deletedSaleIds) {
+        const existing = saleMap.get(delSaleId);
+        if (existing) existing.status = 'ARCHIVED';
+      }
+      db.sales = Array.from(saleMap.values()).sort((a, b) =>
+        String(b.createdAt).localeCompare(String(a.createdAt))
+      );
+
+      if (body.settings?.usdToKhr && db.updatedAt === 0) {
+        db.settings.usdToKhr = roundKhr(Number(body.settings.usdToKhr) || 4100);
+      }
+      saveDb(db, true);
+    }
+    return res.status(200).json({
+      updatedAt: db.updatedAt,
+      products: db.products.filter((p) => !p.archived),
+      sales: db.sales.filter((s) => s.status !== 'ARCHIVED'),
+      settings: db.settings,
+    });
+  }
+
+  if (pathname === '/api/events' && req.method === 'GET') {
+    const since = Number(urlObj.searchParams.get('since') || 0);
+    const list = (db.events || []).filter((e) => e.timestampMs > since);
+    return res.status(200).json(list);
+  }
+
   const validUser = process.env.RETAILFLOW_USERNAME || 'morkraksa';
   const validPass = process.env.RETAILFLOW_PASSWORD || 'admin1234';
 
@@ -270,7 +313,7 @@ module.exports = async function handler(req, res) {
     }
 
     const created = {
-      id: crypto.randomUUID(),
+      id: body.id ? String(body.id) : crypto.randomUUID(),
       name: String(body.name || 'Unnamed Product').trim(),
       barcode,
       category: String(body.category || 'General').trim() || 'General',
@@ -282,8 +325,17 @@ module.exports = async function handler(req, res) {
       expirationDate: body.expirationDate || null,
       imageUrl: body.imageUrl || null,
       archived: false,
+      updatedAtMs: Date.now(),
     };
     db.products.unshift(created);
+    pushEvent(
+      db,
+      'PRODUCT_ADDED',
+      `New Product Added: ${created.name}`,
+      `បានបន្ថែមទំនិញថ្មី៖ ${created.name}`,
+      `${khrPrice.toLocaleString()} ៛ · Stock: ${created.stock}`,
+      { clientId, productId: created.id }
+    );
     saveDb(db);
     return res.status(201).json(created);
   }
@@ -296,6 +348,15 @@ module.exports = async function handler(req, res) {
     const body = await readBody(req);
     const added = Math.round(Number(body.quantity ?? body.delta ?? 0) || 0);
     product.stock = Math.max(0, product.stock + added);
+    product.updatedAtMs = Date.now();
+    pushEvent(
+      db,
+      'PRODUCT_UPDATED',
+      `Restocked: ${product.name} (+${added})`,
+      `បានបន្ថែមស្តុក៖ ${product.name} (+${added})`,
+      `Stock: ${product.stock}`,
+      { clientId, productId: product.id }
+    );
     saveDb(db);
     return res.status(200).json(product);
   }
@@ -354,7 +415,16 @@ module.exports = async function handler(req, res) {
         ),
         expirationDate:
           body.expirationDate !== undefined ? body.expirationDate : db.products[idx].expirationDate,
+        updatedAtMs: Date.now(),
       };
+      pushEvent(
+        db,
+        'PRODUCT_UPDATED',
+        `Product Updated: ${db.products[idx].name}`,
+        `បានកែប្រែទំនិញ៖ ${db.products[idx].name}`,
+        `${khrPrice.toLocaleString()} ៛ · Stock: ${db.products[idx].stock}`,
+        { clientId, productId: db.products[idx].id }
+      );
       saveDb(db);
       return res.status(200).json(db.products[idx]);
     }
@@ -376,7 +446,6 @@ module.exports = async function handler(req, res) {
     const touched = [];
 
     for (const item of items) {
-      // Case A: Restock existing product by productId
       if (item.productId) {
         const existingById = db.products.find((p) => !p.archived && p.id === item.productId);
         if (existingById) {
@@ -388,7 +457,6 @@ module.exports = async function handler(req, res) {
         }
       }
 
-      // Case B: Match by barcode or create new product
       const code = item.barcode ? String(item.barcode).trim() : null;
       const existingByCode = code
         ? db.products.find(
@@ -432,6 +500,14 @@ module.exports = async function handler(req, res) {
         touched.push(newProd);
       }
     }
+    pushEvent(
+      db,
+      'PRODUCT_ADDED',
+      `Batch Committed (${createdCount} new, ${restockedCount} restocked)`,
+      `បានរក្សាទុកទំនិញជាក្រុម (${createdCount} ថ្មី, ${restockedCount} បន្ថែមស្តុក)`,
+      `${touched.length} items updated`,
+      { clientId }
+    );
     saveDb(db);
     return res.status(200).json({
       created: createdCount,
@@ -489,17 +565,26 @@ module.exports = async function handler(req, res) {
       });
     }
 
+    const totalKhr = roundKhr(totalUsd * rate);
     const sale = {
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       rateSnapshot: rate,
       totalUsd: Number(totalUsd.toFixed(2)),
-      totalKhr: roundKhr(totalUsd * rate),
+      totalKhr,
       paidCurrency: body.paidCurrency || 'KHR',
       status: 'COMPLETED',
       items: saleItems,
     };
     db.sales.unshift(sale);
+    pushEvent(
+      db,
+      'CHECKOUT',
+      `Checkout #${sale.id.slice(0, 8).toUpperCase()}`,
+      `ទំនិញបានទូទាត់ #${sale.id.slice(0, 8).toUpperCase()}`,
+      `${totalKhr.toLocaleString()} ៛ · ${saleItems.map((i) => `${i.productName} ×${i.quantity}`).join(', ')}`,
+      { clientId, sale }
+    );
     saveDb(db);
     return res.status(200).json(sale);
   }
