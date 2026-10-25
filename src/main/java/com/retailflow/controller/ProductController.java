@@ -1,7 +1,8 @@
 package com.retailflow.controller;
 
 import com.retailflow.dto.*;
-import com.retailflow.product.*;
+import com.retailflow.entity.*;
+import com.retailflow.repository.*;
 import com.retailflow.service.*;
 import jakarta.validation.Valid;
 import java.util.*;

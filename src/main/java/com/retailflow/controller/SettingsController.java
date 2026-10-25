@@ -1,8 +1,9 @@
 package com.retailflow.controller;
 
 import com.retailflow.dto.*;
+import com.retailflow.entity.*;
+import com.retailflow.repository.*;
 import com.retailflow.service.*;
-import com.retailflow.settings.*;
 import jakarta.validation.Valid;
 import java.util.*;
 import org.springframework.web.bind.annotation.*;

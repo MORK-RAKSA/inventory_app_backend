@@ -1,9 +1,8 @@
 package com.retailflow.service;
 
 import com.retailflow.dto.*;
-import com.retailflow.product.*;
-import com.retailflow.sales.*;
-import com.retailflow.settings.*;
+import com.retailflow.entity.*;
+import com.retailflow.repository.*;
 import java.math.*;
 import java.time.*;
 import java.util.*;
@@ -44,8 +43,11 @@ public class SalesService {
     Optional<Sale> existing = sales.findByIdempotencyKey(in.idempotencyKey());
     if (existing.isPresent()) return existing.get();
     Map<UUID, Integer> merged = new TreeMap<>();
-    for (CartLine line : in.items())
+    Map<UUID, CartLine> firstLineByProduct = new HashMap<>();
+    for (CartLine line : in.items()) {
       merged.merge(line.productId(), line.quantity(), Math::addExact);
+      firstLineByProduct.putIfAbsent(line.productId(), line);
+    }
     // Lock rows deterministically to avoid oversells/deadlocks between cashiers.
     BigDecimal rate = settings.findById(1L).orElseThrow().usdToKhr;
     Sale s = new Sale();
@@ -77,7 +79,32 @@ public class SalesService {
           wholesale && p.wholesalePriceUsd != null && p.wholesalePriceUsd.signum() > 0
               ? p.wholesalePriceUsd
               : p.priceUsd;
-      li.lineTotalUsd = li.unitPriceUsd.multiply(BigDecimal.valueOf(qty));
+
+      CartLine cl = firstLineByProduct.get(p.id);
+      li.cases = cl != null && cl.cases() != null ? cl.cases() : 0;
+      li.loose = cl != null && cl.loose() != null ? cl.loose() : 0;
+      li.caseUnitName =
+          cl != null && cl.caseUnitName() != null ? cl.caseUnitName() : p.caseUnitName;
+      li.baseUnit = cl != null && cl.baseUnit() != null ? cl.baseUnit() : p.baseUnit;
+      li.uom =
+          cl != null && cl.uom() != null
+              ? cl.uom()
+              : (li.cases > 0
+                  ? (li.cases + " " + (li.caseUnitName != null ? li.caseUnitName : "Case"))
+                  : null);
+      li.isWholesale = wholesale || (cl != null && Boolean.TRUE.equals(cl.isWholesale()));
+
+      if (wholesale
+          && li.cases > 0
+          && p.wholesalePricePerCaseUsd != null
+          && p.wholesalePricePerCaseUsd.signum() > 0) {
+        BigDecimal caseTotal = p.wholesalePricePerCaseUsd.multiply(BigDecimal.valueOf(li.cases));
+        BigDecimal looseTotal = li.unitPriceUsd.multiply(BigDecimal.valueOf(Math.max(0, li.loose)));
+        li.lineTotalUsd = caseTotal.add(looseTotal);
+      } else {
+        li.lineTotalUsd = li.unitPriceUsd.multiply(BigDecimal.valueOf(qty));
+      }
+
       total = total.add(li.lineTotalUsd);
       s.items.add(li);
     }

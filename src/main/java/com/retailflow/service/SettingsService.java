@@ -1,7 +1,8 @@
 package com.retailflow.service;
 
 import com.retailflow.dto.*;
-import com.retailflow.settings.*;
+import com.retailflow.entity.*;
+import com.retailflow.repository.*;
 import java.time.OffsetDateTime;
 import org.springframework.transaction.annotation.Transactional;
 

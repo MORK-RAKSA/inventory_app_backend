@@ -1,7 +1,7 @@
 package com.retailflow.controller;
 
-import com.retailflow.product.Product;
-import com.retailflow.product.ProductRepository;
+import com.retailflow.entity.Product;
+import com.retailflow.repository.ProductRepository;
 import com.retailflow.service.LiveEventService;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -24,21 +24,20 @@ public class SystemController {
   public Map<String, Object> health() {
     return Map.of(
         "status", "UP",
-        "database", "H2 SQL (./data/retailflow)",
-        "app", "គ្រប់ហាង · EasySell Spring Boot + H2 Backend",
+        "database", "PostgreSQL",
+        "app", "RetailFlow Spring Boot Backend",
         "timestamp", OffsetDateTime.now(ZoneOffset.UTC).toString());
   }
 
   @GetMapping("/events")
-  public List<LiveEventService.LiveEvent> getEvents(
-      @RequestParam(defaultValue = "0") long since) {
+  public List<LiveEventService.LiveEvent> getEvents(@RequestParam(defaultValue = "0") long since) {
     return events.since(since);
   }
 
   @PostMapping("/state/sync")
   public Map<String, Object> syncState() {
     // H2 is a persistent relational database on disk, so no cold-start sync is required.
-    return Map.of("status", "PERSISTED_IN_H2", "updatedAt", System.currentTimeMillis());
+    return Map.of("status", "PERSISTED_IN_POSTGRESQL", "updatedAt", System.currentTimeMillis());
   }
 
   @GetMapping("/barcode-lookup/{code}")
@@ -55,9 +54,9 @@ public class SystemController {
       res.put("name", p.name);
       res.put("category", p.category);
       res.put("imageUrl", p.imageUrl);
-      res.put("source", "h2");
+      res.put("source", "database");
       return ResponseEntity.ok(res);
     }
-    return ResponseEntity.status(404).body(Map.of("error", "Not in local H2 database"));
+    return ResponseEntity.status(404).body(Map.of("error", "Barcode not found"));
   }
 }

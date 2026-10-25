@@ -1,10 +1,11 @@
 package com.retailflow.service;
 
 import com.retailflow.dto.*;
-import com.retailflow.globalExceptional.ConflictException;
-import com.retailflow.globalExceptional.NotFoundException;
-import com.retailflow.product.*;
-import com.retailflow.settings.SettingsRepository;
+import com.retailflow.entity.*;
+import com.retailflow.exception.ConflictException;
+import com.retailflow.exception.NotFoundException;
+import com.retailflow.repository.*;
+import com.retailflow.repository.SettingsRepository;
 import com.retailflow.util.MoneyUtil;
 import java.math.*;
 import java.util.*;
@@ -69,13 +70,28 @@ public class ProductService {
     p.lowStockThreshold = threshold;
   }
 
-  /** Copies the optional wholesale price (same currency as the retail price) and minimum quantity. */
+  /** Copies the optional wholesale price (same currency as the retail price) and packaging UOM. */
   private void applyWholesale(Product p, ProductInput in) {
+    if (in.baseUnit() != null && !in.baseUnit().isBlank()) p.baseUnit = in.baseUnit().trim();
+    if (in.caseUnitName() != null && !in.caseUnitName().isBlank())
+      p.caseUnitName = in.caseUnitName().trim();
+    if (in.caseQty() != null && in.caseQty() > 0) p.caseQty = in.caseQty();
+
     if (in.wholesalePrice() == null || in.wholesalePrice().signum() <= 0) {
       p.wholesalePriceUsd = null;
     } else {
       p.wholesalePriceUsd = MoneyUtil.toUsd(in.wholesalePrice(), in.currency(), rate());
     }
+
+    if (in.wholesalePricePerCase() != null && in.wholesalePricePerCase().signum() > 0) {
+      p.wholesalePricePerCaseUsd =
+          MoneyUtil.toUsd(in.wholesalePricePerCase(), in.currency(), rate());
+    } else if (p.wholesalePriceUsd != null) {
+      p.wholesalePricePerCaseUsd = p.wholesalePriceUsd.multiply(BigDecimal.valueOf(p.caseQty));
+    } else {
+      p.wholesalePricePerCaseUsd = null;
+    }
+
     p.wholesaleMinQty = in.wholesaleMinQty() == null ? 1 : Math.max(1, in.wholesaleMinQty());
   }
 
@@ -123,7 +139,8 @@ public class ProductService {
       Optional<Product> existing = repo.findByBarcodeAndArchivedFalse(code);
       if (existing.isPresent()) {
         Product p = existing.get();
-        applyDetails(p, in.name(), in.category(), in.price(), in.currency(), in.lowStockThreshold());
+        applyDetails(
+            p, in.name(), in.category(), in.price(), in.currency(), in.lowStockThreshold());
         applyWholesale(p, in);
         if (in.expirationDate() != null) p.expirationDate = in.expirationDate();
         if (in.stock() > 0) {
@@ -288,7 +305,7 @@ public class ProductService {
     int created = 0;
     for (var e : byBarcode.entrySet()) {
       BatchItem it = e.getValue();
-      touched.add(
+      Product p =
           newProduct(
               it.name(),
               e.getKey(),
@@ -297,11 +314,14 @@ public class ProductService {
               ccy(it),
               byBarcodeQty.get(e.getKey()),
               threshold(it),
-              "BATCH_CREATE"));
+              "BATCH_CREATE");
+      applyBatchUom(p, it);
+      repo.save(p);
+      touched.add(p);
       created++;
     }
     for (BatchItem it : noBarcode) {
-      touched.add(
+      Product p =
           newProduct(
               it.name(),
               null,
@@ -310,10 +330,32 @@ public class ProductService {
               ccy(it),
               it.stock(),
               threshold(it),
-              "BATCH_CREATE"));
+              "BATCH_CREATE");
+      applyBatchUom(p, it);
+      repo.save(p);
+      touched.add(p);
       created++;
     }
     return new BatchResult(created, restocked, touched);
+  }
+
+  private void applyBatchUom(Product p, BatchItem it) {
+    if (it.baseUnit() != null && !it.baseUnit().isBlank()) p.baseUnit = it.baseUnit().trim();
+    if (it.caseUnitName() != null && !it.caseUnitName().isBlank())
+      p.caseUnitName = it.caseUnitName().trim();
+    if (it.caseQty() != null && it.caseQty() > 0) p.caseQty = it.caseQty();
+
+    if (it.wholesalePrice() != null && it.wholesalePrice().signum() > 0) {
+      p.wholesalePriceUsd = MoneyUtil.toUsd(it.wholesalePrice(), ccy(it), rate());
+    } else if (it.wholesalePriceUsd() != null && it.wholesalePriceUsd().signum() > 0) {
+      p.wholesalePriceUsd = it.wholesalePriceUsd();
+    }
+
+    if (it.wholesalePricePerCaseUsd() != null && it.wholesalePricePerCaseUsd().signum() > 0) {
+      p.wholesalePricePerCaseUsd = it.wholesalePricePerCaseUsd();
+    } else if (p.wholesalePriceUsd != null) {
+      p.wholesalePricePerCaseUsd = p.wholesalePriceUsd.multiply(BigDecimal.valueOf(p.caseQty));
+    }
   }
 
   private static String ccy(BatchItem it) {

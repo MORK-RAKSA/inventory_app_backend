@@ -1,0 +1,6 @@
+# Production configuration is inherited from application.yml.
+# Secrets are supplied by the host environment.
+logging:
+  level:
+    root: INFO
+    com.retailflow: INFO

@@ -2,7 +2,9 @@
 build/
 .idea/
 *.iml
-.DS_Store
 .env
-data/*.lock.db
-data/*.trace.db
+.env.*
+!.env.example
+.DS_Store
+*.log
+src/main/resources/application.yml

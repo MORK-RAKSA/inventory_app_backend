@@ -1,13 +1,10 @@
 {
-  "version": 2,
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/api/index.js"
-    }
+    { "source": "/api/:path*", "destination": "https://inventoryappbackend.vercel.app/api/:path*" },
+    { "source": "/swagger-ui/:path*", "destination": "https://inventoryappbackend.vercel.app/swagger-ui/:path*" },
+    { "source": "/swagger-ui.html", "destination": "https://inventoryappbackend.vercel.app/swagger-ui.html" },
+    { "source": "/v3/api-docs/:path*", "destination": "https://inventoryappbackend.vercel.app/v3/api-docs/:path*" },
+    { "source": "/v3/api-docs", "destination": "https://inventoryappbackend.vercel.app/v3/api-docs" }
   ]
 }

@@ -1,6 +1,6 @@
 package com.retailflow.service;
 
-import com.retailflow.sales.Sale;
+import com.retailflow.entity.Sale;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -42,12 +42,7 @@ public class LiveEventService {
   }
 
   public void push(
-      String type,
-      String titleEn,
-      String titleKh,
-      String detail,
-      String productId,
-      Sale sale) {
+      String type, String titleEn, String titleKh, String detail, String productId, Sale sale) {
     long now = System.currentTimeMillis();
     LiveEvent ev =
         new LiveEvent(

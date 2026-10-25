@@ -16,4 +16,10 @@ public record BatchItem(
     BigDecimal price,
     String currency,
     Integer stock,
-    Integer lowStockThreshold) {}
+    Integer lowStockThreshold,
+    String baseUnit,
+    String caseUnitName,
+    Integer caseQty,
+    BigDecimal wholesalePrice,
+    BigDecimal wholesalePriceUsd,
+    BigDecimal wholesalePricePerCaseUsd) {}

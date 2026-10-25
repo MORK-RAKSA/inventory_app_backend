@@ -14,4 +14,8 @@ public record ProductInput(
     java.time.LocalDate expirationDate,
     /** Optional wholesale price, expressed in the same {@code currency} as {@code price}. */
     @DecimalMin("0") BigDecimal wholesalePrice,
-    @Min(1) Integer wholesaleMinQty) {}
+    BigDecimal wholesalePricePerCase,
+    @Min(1) Integer wholesaleMinQty,
+    String baseUnit,
+    String caseUnitName,
+    @Min(1) Integer caseQty) {}
