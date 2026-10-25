@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://YOUR-SPRING-BOOT-HOST.example.com/api/:path*" },
+    { "source": "/swagger-ui/:path*", "destination": "https://YOUR-SPRING-BOOT-HOST.example.com/swagger-ui/:path*" },
+    { "source": "/swagger-ui.html", "destination": "https://YOUR-SPRING-BOOT-HOST.example.com/swagger-ui.html" },
+    { "source": "/v3/api-docs/:path*", "destination": "https://YOUR-SPRING-BOOT-HOST.example.com/v3/api-docs/:path*" },
+    { "source": "/v3/api-docs", "destination": "https://YOUR-SPRING-BOOT-HOST.example.com/v3/api-docs" }
+  ]
+}

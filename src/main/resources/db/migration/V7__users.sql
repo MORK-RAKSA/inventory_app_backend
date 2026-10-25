@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS app_users (
+  id VARCHAR(36) PRIMARY KEY,
+  username VARCHAR(100) NOT NULL UNIQUE,
+  email VARCHAR(254) NOT NULL UNIQUE,
+  full_name VARCHAR(200) NOT NULL,
+  password_hash VARCHAR(100) NOT NULL,
+  role VARCHAR(30) NOT NULL DEFAULT 'USER',
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+ALTER TABLE auth_sessions ADD COLUMN user_id VARCHAR(36);
+ALTER TABLE auth_sessions ADD CONSTRAINT fk_auth_sessions_user FOREIGN KEY (user_id) REFERENCES app_users(id);
+CREATE INDEX idx_auth_sessions_user_id ON auth_sessions(user_id);
