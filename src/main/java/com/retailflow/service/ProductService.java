@@ -77,15 +77,20 @@ public class ProductService {
       p.caseUnitName = in.caseUnitName().trim();
     if (in.caseQty() != null && in.caseQty() > 0) p.caseQty = in.caseQty();
 
-    if (in.wholesalePrice() == null || in.wholesalePrice().signum() <= 0) {
-      p.wholesalePriceUsd = null;
-    } else {
+    if (in.wholesalePrice() != null && in.wholesalePrice().signum() > 0) {
       p.wholesalePriceUsd = MoneyUtil.toUsd(in.wholesalePrice(), in.currency(), rate());
+    } else if (in.wholesalePriceUsd() != null && in.wholesalePriceUsd().signum() > 0) {
+      p.wholesalePriceUsd = in.wholesalePriceUsd();
+    } else {
+      p.wholesalePriceUsd = null;
     }
 
     if (in.wholesalePricePerCase() != null && in.wholesalePricePerCase().signum() > 0) {
       p.wholesalePricePerCaseUsd =
           MoneyUtil.toUsd(in.wholesalePricePerCase(), in.currency(), rate());
+    } else if (in.wholesalePricePerCaseUsd() != null
+        && in.wholesalePricePerCaseUsd().signum() > 0) {
+      p.wholesalePricePerCaseUsd = in.wholesalePricePerCaseUsd();
     } else if (p.wholesalePriceUsd != null) {
       p.wholesalePricePerCaseUsd = p.wholesalePriceUsd.multiply(BigDecimal.valueOf(p.caseQty));
     } else {

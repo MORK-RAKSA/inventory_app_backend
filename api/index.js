@@ -23,16 +23,26 @@ function roundKhr(n) {
   return Math.max(100, Math.round(val / 100) * 100);
 }
 
-/** Converts an optional wholesale price (same currency as retail) to USD, or fallback. */
+/** Converts an optional wholesale price (same currency as retail or already in USD) to USD, or fallback. */
 function wholesaleUsd(body, ccy, rate, fallback) {
+  if (body.wholesalePrice === null || body.wholesalePriceUsd === null) {
+    return null;
+  }
   if (body.wholesalePrice === undefined && body.wholesalePriceUsd === undefined) {
     return fallback === undefined ? null : fallback;
   }
-  const raw = Number(body.wholesalePrice ?? body.wholesalePriceUsd ?? 0) || 0;
-  if (raw <= 0) return null;
-  return ccy === 'KHR'
-    ? Number((roundKhr(raw) / rate).toFixed(4))
-    : Number(raw.toFixed(4));
+  if (body.wholesalePrice !== undefined && body.wholesalePrice !== null) {
+    const raw = Number(body.wholesalePrice) || 0;
+    if (raw <= 0) return null;
+    return ccy === 'KHR'
+      ? Number((roundKhr(raw) / rate).toFixed(4))
+      : Number(raw.toFixed(4));
+  }
+  if (body.wholesalePriceUsd !== undefined && body.wholesalePriceUsd !== null) {
+    const val = Number(body.wholesalePriceUsd) || 0;
+    return val > 0 ? Number(val.toFixed(4)) : null;
+  }
+  return null;
 }
 
 const DEFAULT_UOM_CONFIGS = [
@@ -1373,8 +1383,10 @@ module.exports = async function handler(req, res) {
         caseUnitName: body.caseUnitName !== undefined ? String(body.caseUnitName).trim() : db.products[idx].caseUnitName || 'Case',
         caseQty: body.caseQty !== undefined ? Math.max(1, Math.round(Number(body.caseQty) || 24)) : db.products[idx].caseQty || 24,
         wholesalePricePerCaseUsd:
-          body.wholesalePricePerCaseUsd !== undefined
-            ? Number(body.wholesalePricePerCaseUsd)
+          body.wholesalePriceUsd === null || body.wholesalePrice === null
+            ? null
+            : body.wholesalePricePerCaseUsd !== undefined
+            ? (body.wholesalePricePerCaseUsd === null ? null : Number(body.wholesalePricePerCaseUsd))
             : db.products[idx].wholesalePricePerCaseUsd ?? null,
         updatedAtMs: Date.now(),
       };
