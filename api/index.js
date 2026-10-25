@@ -1,7 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { Pool } = require('pg');
+
+let Pool = null;
+try {
+  Pool = require('pg').Pool;
+} catch (e) {
+  console.warn('[Postgres] Optional package "pg" not available, running with in-memory store:', e?.message);
+}
 
 const DEFAULT_POSTGRES_URL =
   'postgres://d8b178a67e25e3d14262647b025cd009f84073e4a26510594351f6d689fba592:sk_J4whUrh4wYStQfyAPgDXg@pooled.db.prisma.io:5432/postgres?sslmode=require';
@@ -74,6 +80,13 @@ let initPromise = null;
 
 function getPool() {
   if (pool) return pool;
+  if (!Pool) {
+    try {
+      Pool = require('pg').Pool;
+    } catch (e) {
+      return null;
+    }
+  }
   try {
     pool = new Pool({
       connectionString: DB_URL,
