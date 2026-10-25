@@ -48,4 +48,11 @@ public class UserController {
     if (current == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
     return UserResponse.from(current);
   }
+
+  @DeleteMapping("/{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void delete(@PathVariable String id, HttpServletRequest request) {
+    admin(request);
+    repo.deleteById(id);
+  }
 }

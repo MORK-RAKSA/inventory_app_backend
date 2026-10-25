@@ -7,4 +7,6 @@ public interface UserService {
   AppUser create(UserCreateRequest request);
 
   AppUser authenticate(String username, String password);
+
+  AppUser resetPassword(String username, String newPassword);
 }
