@@ -23,7 +23,9 @@ public class LiveEventService {
       long timestampMs,
       String clientId,
       String productId,
-      Sale sale) {}
+      Sale sale,
+      String barcode,
+      String scanMode) {}
 
   private final Deque<LiveEvent> events = new ConcurrentLinkedDeque<>();
 
@@ -43,8 +45,7 @@ public class LiveEventService {
 
   public void push(
       String type, String titleEn, String titleKh, String detail, String productId, Sale sale) {
-    long now = System.currentTimeMillis();
-    LiveEvent ev =
+    append(
         new LiveEvent(
             UUID.randomUUID().toString(),
             type,
@@ -52,10 +53,39 @@ public class LiveEventService {
             titleKh,
             detail,
             OffsetDateTime.now(ZoneOffset.UTC).toString(),
-            now,
+            System.currentTimeMillis(),
             currentClientId(),
             productId,
-            sale);
+            sale,
+            null,
+            null));
+  }
+
+  /**
+   * Wireless mobile scanner gun broadcast. The web portal polls {@code /api/events} and routes
+   * itself to the POS / Inventory / Product form / Batch intake screen carried by {@code scanMode}.
+   */
+  public LiveEvent pushScan(String barcode, String scanMode) {
+    String mode = scanMode == null || scanMode.isBlank() ? "checkout" : scanMode.trim();
+    LiveEvent ev =
+        new LiveEvent(
+            UUID.randomUUID().toString(),
+            "SCANNER_GUN_SCAN",
+            "Mobile Scanner Gun: " + barcode,
+            "ស្កេនពីទូរស័ព្ទ៖ " + barcode,
+            barcode,
+            OffsetDateTime.now(ZoneOffset.UTC).toString(),
+            System.currentTimeMillis(),
+            currentClientId(),
+            null,
+            null,
+            barcode,
+            mode);
+    append(ev);
+    return ev;
+  }
+
+  private void append(LiveEvent ev) {
     events.addFirst(ev);
     while (events.size() > 60) {
       events.removeLast();

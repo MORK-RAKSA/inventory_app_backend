@@ -23,13 +23,15 @@ spring:
     properties:
       hibernate:
         format_sql: false
-        default_schema: public
+        default_schema: ${DB_SCHEMA:public}
 
   flyway:
     enabled: true
     locations: classpath:db/migration
     default-schema: ${DB_SCHEMA:public}
-    baseline-on-migrate: false
+    schemas: ${DB_SCHEMA:public}
+    create-schemas: true
+    baseline-on-migrate: true
 
 springdoc:
   api-docs:
@@ -41,13 +43,13 @@ springdoc:
 
 retail-flow:
   cors:
-    origins: ${CORS_ORIGINS:http://localhost:3000}
+    origins: ${CORS_ORIGINS:http://localhost:8081}
 
-logging:
-  level:
-    root: INFO
-    com.retailflow: INFO
-    org.hibernate.SQL: WARN
-    com.zaxxer.hikari: INFO
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [requestId:%X{requestId}] [%thread] %logger{36} - %msg%n"
+#logging:
+#  level:
+#    root: INFO
+#    com.retailflow: INFO
+#    org.hibernate.SQL: WARN
+#    com.zaxxer.hikari: INFO
+#  pattern:
+#    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [requestId:%X{requestId}] [%thread] %logger{36} - %msg%n"

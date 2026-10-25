@@ -34,6 +34,24 @@ public class SystemController {
     return events.since(since);
   }
 
+  /**
+   * Wireless mobile scanner gun endpoint. The phone beams a barcode plus the selected function so
+   * the web portal can route itself (POS, inventory find, product form, batch intake).
+   */
+  @PostMapping("/events/scan")
+  public ResponseEntity<Map<String, Object>> beamScan(
+      @RequestBody(required = false) Map<String, Object> body) {
+    Object rawBarcode = body == null ? null : body.get("barcode");
+    String barcode = rawBarcode == null ? "" : String.valueOf(rawBarcode).trim();
+    if (barcode.isEmpty()) {
+      return ResponseEntity.badRequest().body(Map.of("error", "Missing barcode"));
+    }
+    Object rawMode = body.get("scanMode");
+    String scanMode = rawMode == null ? "checkout" : String.valueOf(rawMode);
+    LiveEventService.LiveEvent ev = events.pushScan(barcode, scanMode);
+    return ResponseEntity.ok(Map.of("ok", true, "event", ev));
+  }
+
   @PostMapping("/state/sync")
   public Map<String, Object> syncState() {
     // H2 is a persistent relational database on disk, so no cold-start sync is required.

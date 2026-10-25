@@ -9,10 +9,7 @@ try {
   console.warn('[Postgres] Optional package "pg" not available, running with in-memory store:', e?.message);
 }
 
-const DEFAULT_POSTGRES_URL =
-  'postgres://d8b178a67e25e3d14262647b025cd009f84073e4a26510594351f6d689fba592:sk_J4whUrh4wYStQfyAPgDXg@pooled.db.prisma.io:5432/postgres?sslmode=require';
-
-const DB_URL = process.env.DATABASE_URL || DEFAULT_POSTGRES_URL;
+const DB_URL = process.env.DATABASE_URL
 
 // dev_app for development/local, prod_app for deployment/production
 const IS_PROD =
@@ -217,7 +214,7 @@ async function initPostgres() {
         const nowIso = new Date().toISOString();
         await client.query(
           `INSERT INTO app_users (id, username, email, full_name, password_hash, role, active, created_at, updated_at)
-           VALUES 
+           VALUES
              ($1, $2, $3, $4, $5, $6, $7, $8, $9),
              ($10, $11, $12, $13, $14, $15, $16, $17, $18)
            ON CONFLICT (username) DO NOTHING`,

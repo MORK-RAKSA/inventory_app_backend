@@ -1,5 +1,15 @@
 # Production configuration is inherited from application.yml.
 # Secrets are supplied by the host environment.
+spring:
+  jpa:
+    properties:
+      hibernate:
+        default_schema: ${DB_SCHEMA:prod_app}
+  flyway:
+    default-schema: ${DB_SCHEMA:prod_app}
+    schemas: ${DB_SCHEMA:prod_app}
+    create-schemas: true
+
 logging:
   level:
     root: INFO
