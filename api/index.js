@@ -49,11 +49,7 @@ function wholesaleUsd(body, ccy, rate, fallback) {
 }
 
 const DEFAULT_UOM_CONFIGS = [
-  { id: 'uom-case-24', name: 'Case of 24', baseUnit: 'Can', caseUnitName: 'Case', caseQty: 24, description: 'Standard 24-can beverage or grocery case' },
-  { id: 'uom-case-12', name: 'Case of 12', baseUnit: 'Bottle', caseUnitName: 'Case', caseQty: 12, description: '12-bottle beverage, oil, or sauce case' },
-  { id: 'uom-pack-6', name: 'Pack of 6', baseUnit: 'Bottle', caseUnitName: 'Pack', caseQty: 6, description: '6-pack shrink bundle or six-pack carton' },
-  { id: 'uom-box-1', name: 'Box of 1', baseUnit: 'Piece', caseUnitName: 'Box', caseQty: 1, description: 'Single individual packaged box or piece' },
-  { id: 'uom-carton-48', name: 'Carton of 48', baseUnit: 'Piece', caseUnitName: 'Carton', caseQty: 48, description: 'Bulk 48-unit master shipping carton' },
+  { id: 'uom-case-24', name: 'Case of 24', baseUnit: 'Can', caseUnitName: 'Case', caseQty: 24, description: 'Standard 24-can beverage or grocery case' }
 ];
 
 function getDefaultDb() {

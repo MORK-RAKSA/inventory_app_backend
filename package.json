@@ -2,8 +2,11 @@
   "name": "easysell-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "គ្រប់ហាង · EasySell Backend API for Vercel",
+  "description": "RetailFlow Backend API Gateway for Vercel & Spring Boot",
   "engines": {
     "node": ">=18.x"
+  },
+  "dependencies": {
+    "pg": "^8.11.3"
   }
 }
