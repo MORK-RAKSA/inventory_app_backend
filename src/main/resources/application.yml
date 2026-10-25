@@ -39,6 +39,10 @@ springdoc:
     enabled: true
     path: /swagger-ui.html
 
+retail-flow:
+  cors:
+    origins: ${CORS_ORIGINS:http://localhost:3000}
+
 logging:
   level:
     root: INFO
