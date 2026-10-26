@@ -1343,13 +1343,23 @@ module.exports = async function handler(req, res) {
     if (!product) return res.status(404).json({ error: 'Product not found' });
     if (req.method === 'DELETE') {
       product.imageUrl = null;
+      product.updatedAt = Date.now();
       saveDb(db);
       persistProductToPg(product).catch(() => {});
       return res.status(200).json(product);
     }
-    return res
-      .status(501)
-      .json({ error: 'Cloud image bucket not configured; keeping local device URI' });
+    if (req.method === 'POST' || req.method === 'PUT') {
+      const incomingImage = (body && (body.imageUrl || body.image || body.data || body.url)) || (typeof body === 'string' ? body : null);
+      if (!incomingImage) {
+        return res.status(400).json({ error: 'Image payload is required' });
+      }
+      product.imageUrl = String(incomingImage);
+      product.updatedAt = Date.now();
+      saveDb(db);
+      persistProductToPg(product).catch(() => {});
+      return res.status(200).json(product);
+    }
+    return res.status(200).json({ imageUrl: product.imageUrl || null });
   }
 
   const productMatch = pathname.match(/^\/api\/products\/([^/]+)\/?$/);
