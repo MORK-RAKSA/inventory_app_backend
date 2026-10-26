@@ -1,6 +1,8 @@
 package com.retailflow.config;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -13,14 +15,30 @@ public class CorsConfig implements WebMvcConfigurer {
 
   @Override
   public void addCorsMappings(CorsRegistry registry) {
-    String[] patterns =
-        Arrays.stream(origins.split(","))
-            .map(String::trim)
-            .filter(s -> !s.isEmpty())
-            .toArray(String[]::new);
+    List<String> patterns = new ArrayList<>();
+    if (origins != null && !origins.isBlank() && !origins.equals("*")) {
+      Arrays.stream(origins.split(","))
+          .map(String::trim)
+          .filter(s -> !s.isEmpty())
+          .forEach(patterns::add);
+    }
+    // Always permit localhost dev (any port), 127.0.0.1, Vercel deployments, Render, Expo, and wildcards
+    patterns.add("http://localhost:[*]");
+    patterns.add("http://localhost:*");
+    patterns.add("http://127.0.0.1:[*]");
+    patterns.add("http://127.0.0.1:*");
+    patterns.add("http://192.168.*:[*]");
+    patterns.add("http://192.168.*:*");
+    patterns.add("http://10.*:[*]");
+    patterns.add("http://10.*:*");
+    patterns.add("https://*.vercel.app");
+    patterns.add("https://*.onrender.com");
+    patterns.add("exp://*");
+    patterns.add("*");
+
     registry
-        .addMapping("/api/**")
-        .allowedOriginPatterns(patterns.length == 0 ? new String[] {"*"} : patterns)
+        .addMapping("/**")
+        .allowedOriginPatterns(patterns.toArray(new String[0]))
         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         .allowedHeaders("*")
         .exposedHeaders("X-Server-Updated-At")
