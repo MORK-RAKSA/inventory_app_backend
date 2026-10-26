@@ -711,7 +711,7 @@ module.exports = async function handler(req, res) {
   }
 
   // ==================== 1. AUTH & USER ENDPOINTS ====================
-  if (pathname === '/api/auth/login' && req.method === 'POST') {
+  if ((pathname === '/api/auth/login' || pathname === '/api/login') && req.method === 'POST') {
     const body = await readBody(req);
     const u = String(body.username || '').trim().toLowerCase();
     const p = String(body.password || '');
@@ -809,7 +809,7 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  if (pathname === '/api/auth/refresh' && req.method === 'POST') {
+  if ((pathname === '/api/auth/refresh' || pathname === '/api/refresh') && req.method === 'POST') {
     const body = await readBody(req);
     const verified = verifyToken(body.refreshToken);
     const u = verified?.sub || 'morkraksa';
@@ -827,7 +827,7 @@ module.exports = async function handler(req, res) {
   }
 
   // ==================== FORGOT & RESET PASSWORD ====================
-  if ((pathname === '/api/auth/forgot-password' || pathname === '/api/auth/reset-password') && req.method === 'POST') {
+  if ((pathname === '/api/auth/forgot-password' || pathname === '/api/auth/reset-password' || pathname === '/api/forgot-password' || pathname === '/api/reset-password') && req.method === 'POST') {
     const body = await readBody(req);
     const username = String(body.username || '').trim().toLowerCase();
     const newPassword = String(body.newPassword || body.password || '').trim();
@@ -954,7 +954,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ success: true });
   }
 
-  if (pathname === '/api/auth/logout' && req.method === 'POST') {
+  if ((pathname === '/api/auth/logout' || pathname === '/api/logout') && req.method === 'POST') {
     return res.status(200).json({ success: true });
   }
 
