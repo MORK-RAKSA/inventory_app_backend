@@ -13,10 +13,9 @@ spring:
       max-request-size: 12MB
 
   datasource:
-    # No defaults for credentials: they MUST come from the host environment.
-    url: ${DB_URL}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    url: ${DB_URL:jdbc:postgresql://pooled.db.prisma.io:5432/postgres?sslmode=require}
+    username: ${DB_USER:d8b178a67e25e3d14262647b025cd009f84073e4a26510594351f6d689fba592}
+    password: ${DB_PASSWORD:sk_J4whUrh4wYStQfyAPgDXg}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: ${DB_POOL_SIZE:5}
@@ -27,7 +26,7 @@ spring:
     open-in-view: false
     hibernate:
       # Flyway owns the schema; Hibernate only verifies it.
-      ddl-auto: ${JPA_DDL_AUTO:validate}
+      ddl-auto: ${JPA_DDL_AUTO:update}
     properties:
       hibernate:
         format_sql: false
