@@ -4,6 +4,10 @@
     {
       "source": "/api/((?!index).*)$",
       "destination": "/api/index.js"
+    },
+    {
+      "source": "/((?!api/|favicon\\.ico).*)",
+      "destination": "/api/index.js"
     }
   ]
 }

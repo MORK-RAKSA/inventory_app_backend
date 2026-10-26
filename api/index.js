@@ -520,10 +520,14 @@ async function readBody(req) {
 
 function normalizePath(rawPath) {
   if (!rawPath || rawPath === '/' || rawPath === '/api' || rawPath === '/api/') return '/api/health';
-  if (!rawPath.startsWith('/api/')) {
-    return `/api${rawPath.startsWith('/') ? '' : '/'}${rawPath}`;
+  let clean = rawPath;
+  while (clean.startsWith('/api/api/')) {
+    clean = clean.replace('/api/api/', '/api/');
   }
-  return rawPath;
+  if (!clean.startsWith('/api/')) {
+    clean = `/api${clean.startsWith('/') ? '' : '/'}${clean}`;
+  }
+  return clean;
 }
 
 function getEffectivePath(req) {
@@ -993,7 +997,10 @@ module.exports = async function handler(req, res) {
     };
     db.uomConfigs.push(created);
     saveDb(db);
-    persistUomToPg(created).catch(() => {});
+    // Persist to PostgreSQL, but don't crash the request if it fails
+    persistUomToPg(created).catch((err) => {
+      console.warn('Failed to persist UOM to PostgreSQL:', err.message);
+    });
     return res.status(201).json(created);
   }
 
@@ -1016,7 +1023,10 @@ module.exports = async function handler(req, res) {
     };
     db.uomConfigs[idx] = updated;
     saveDb(db);
-    persistUomToPg(updated).catch(() => {});
+    // Persist to PostgreSQL, but don't crash the request if it fails
+    persistUomToPg(updated).catch((err) => {
+      console.warn('Failed to persist UOM update to PostgreSQL:', err.message);
+    });
     return res.status(200).json(updated);
   }
 
@@ -1027,7 +1037,10 @@ module.exports = async function handler(req, res) {
     if (idx === -1) return res.status(404).json({ error: 'UOM config not found' });
     const removed = db.uomConfigs.splice(idx, 1)[0];
     saveDb(db);
-    persistUomToPg(removed, true).catch(() => {});
+    // Persist to PostgreSQL, but don't crash the request if it fails
+    persistUomToPg(removed, true).catch((err) => {
+      console.warn('Failed to persist UOM deletion to PostgreSQL:', err.message);
+    });
     return res.status(200).json({ ok: true, removed });
   }
 
