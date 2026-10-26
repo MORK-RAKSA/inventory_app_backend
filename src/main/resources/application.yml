@@ -7,9 +7,9 @@ spring:
     name: retailflow-backend
 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    url: ${DB_URL:jdbc:postgresql://pooled.db.prisma.io:5432/postgres?sslmode=require}
+    username: ${DB_USER:d8b178a67e25e3d14262647b025cd009f84073e4a26510594351f6d689fba592}
+    password: ${DB_PASSWORD:sk_J4whUrh4wYStQfyAPgDXg}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 5

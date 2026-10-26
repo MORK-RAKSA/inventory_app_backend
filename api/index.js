@@ -967,7 +967,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ usdToKhr: roundKhr(db.settings.usdToKhr || 4100) });
   }
 
-  if (pathname === '/api/settings/rate' && req.method === 'PUT') {
+  if ((pathname === '/api/settings/rate' || pathname === '/api/settings' || pathname === '/settings/rate' || pathname === '/settings') && req.method === 'PUT') {
     const body = await readBody(req);
     const nextRate = roundKhr(Number(body.usdToKhr) || 4100);
     db.settings.usdToKhr = nextRate;
