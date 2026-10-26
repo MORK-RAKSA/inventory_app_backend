@@ -1,9 +1,44 @@
+# Gradle & Java build artifacts
 .gradle/
 build/
-.idea/
-*.iml
+out/
+target/
+bin/
+*.class
+*.jar
+*.war
+
+# Node & Vercel serverless artifacts
+node_modules/
+.vercel/
+package-lock.json.bak
+
+# Local databases & file caches
+data/*.mv.db
+data/*.trace.db
+*.db
+/tmp/
+tmp/
+
+# Environment variables & secrets
 .env
 .env.*
+.env.local
 !.env.example
+
+# IDE & Editors
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS & Logs
 .DS_Store
+.DS_Store?
+._*
 *.log
+Thumbs.db
