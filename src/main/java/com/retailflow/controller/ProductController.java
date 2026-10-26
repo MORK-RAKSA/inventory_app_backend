@@ -46,7 +46,9 @@ public class ProductController {
     return service.edit(id, input);
   }
 
-  @PostMapping("/{id}/restock")
+  @RequestMapping(
+      value = "/{id}/restock",
+      method = {RequestMethod.POST, RequestMethod.PATCH})
   public Product restock(@PathVariable UUID id, @Valid @RequestBody StockInput input) {
     return service.restock(id, input);
   }

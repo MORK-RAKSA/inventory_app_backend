@@ -17,3 +17,5 @@ services:
         value: prod_app
       - key: CORS_ALLOWED_ORIGINS
         sync: false
+      - key: SWAGGER_ENABLED
+        value: "false"

@@ -1,0 +1,12 @@
+.git
+.gradle
+.idea
+build
+data
+*.iml
+*.log
+.env
+.env.*
+vercel.json
+render.yaml
+*.md

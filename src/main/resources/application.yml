@@ -1,25 +1,33 @@
-
 server:
   port: ${PORT:8080}
+  forward-headers-strategy: framework
+  shutdown: graceful
 
 spring:
   application:
     name: retailflow-backend
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+
   datasource:
-    url: ${DB_URL:jdbc:postgresql://pooled.db.prisma.io:5432/postgres?sslmode=require}
-    username: ${DB_USER:d8b178a67e25e3d14262647b025cd009f84073e4a26510594351f6d689fba592}
-    password: ${DB_PASSWORD:sk_J4whUrh4wYStQfyAPgDXg}
+    # No defaults for credentials: they MUST come from the host environment.
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 5
+      maximum-pool-size: ${DB_POOL_SIZE:5}
       minimum-idle: 1
       connection-timeout: 30000
 
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: update
+      # Flyway owns the schema; Hibernate only verifies it.
+      ddl-auto: ${JPA_DDL_AUTO:validate}
     properties:
       hibernate:
         format_sql: false
@@ -35,21 +43,25 @@ spring:
 
 springdoc:
   api-docs:
-    enabled: true
+    enabled: ${SWAGGER_ENABLED:true}
     path: /v3/api-docs
   swagger-ui:
-    enabled: true
+    enabled: ${SWAGGER_ENABLED:true}
     path: /swagger-ui.html
 
 retail-flow:
   cors:
-    origins: ${CORS_ORIGINS:http://localhost:8081}
+    origins: ${CORS_ALLOWED_ORIGINS:*}
+  auth:
+    # Password-reset recovery key. Empty = the reset endpoint is disabled.
+    recovery-key: ${RECOVERY_KEY:}
 
-#logging:
-#  level:
-#    root: INFO
-#    com.retailflow: INFO
-#    org.hibernate.SQL: WARN
-#    com.zaxxer.hikari: INFO
-#  pattern:
-#    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [requestId:%X{requestId}] [%thread] %logger{36} - %msg%n"
+retailflow:
+  storage:
+    r2:
+      # Optional Cloudflare R2 image storage. Image upload returns 501 when unset.
+      account-id: ${R2_ACCOUNT_ID:}
+      access-key-id: ${R2_ACCESS_KEY_ID:}
+      secret-access-key: ${R2_SECRET_ACCESS_KEY:}
+      bucket: ${R2_BUCKET:}
+      public-url: ${R2_PUBLIC_URL:}

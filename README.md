@@ -1,6 +1,6 @@
 # RetailFlow — Spring Boot Backend
 
-Java 21 / Spring Boot 3.5.6 / Gradle / PostgreSQL / Flyway. The Node.js Vercel backend has been removed.
+Java 21 / Spring Boot 3.5.6 / Gradle / PostgreSQL / Flyway, deployed as a Docker image. The Node.js Vercel backend has been removed; Vercel is used only as an `/api` proxy (`vercel.json`).
 
 ## Layout
 

@@ -19,6 +19,10 @@ public class AuthController {
   private final JdbcTemplate db;
   private final UserService users;
   private final SecureRandom random = new SecureRandom();
+
+  @org.springframework.beans.factory.annotation.Value("${retail-flow.auth.recovery-key:}")
+  private String recoveryKey;
+
   private static final long ACCESS_SECONDS = 86400, SESSION_SECONDS = 90L * 86400;
 
   public AuthController(JdbcTemplate db, UserService users) {
@@ -153,7 +157,11 @@ public class AuthController {
   @PostMapping({"/reset-password", "/forgot-password"})
   public Map<String, Object> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
     String key = req.recoveryKey() != null ? req.recoveryKey().trim() : "";
-    if (!"admin1234".equals(key) && !"8888".equals(key)) {
+    // Disabled unless RECOVERY_KEY is configured; compared in constant time.
+    if (recoveryKey == null
+        || recoveryKey.isBlank()
+        || !MessageDigest.isEqual(
+            recoveryKey.getBytes(StandardCharsets.UTF_8), key.getBytes(StandardCharsets.UTF_8))) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid recovery key");
     }
     AppUser u = users.resetPassword(req.username(), req.newPassword());

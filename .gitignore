@@ -7,4 +7,3 @@ build/
 !.env.example
 .DS_Store
 *.log
-src/main/resources/application.yml
