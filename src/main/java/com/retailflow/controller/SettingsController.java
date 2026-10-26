@@ -26,4 +26,9 @@ public class SettingsController {
   public StoreSettings rate(@Valid @RequestBody RateUpdate input) {
     return service.rate(input);
   }
+
+  @PutMapping
+  public StoreSettings update(@RequestBody SettingsUpdate input) {
+    return service.update(input);
+  }
 }

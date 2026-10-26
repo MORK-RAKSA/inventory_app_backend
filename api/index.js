@@ -1036,8 +1036,8 @@ module.exports = async function handler(req, res) {
   if (pathname === '/api/settings' && req.method === 'GET') {
     return res.status(200).json({
       usdToKhr: roundKhr(db.settings.usdToKhr || 4100),
-      categories: Array.isArray(db.settings.categories) ? db.settings.categories : DEFAULT_CATEGORIES,
-      baseUnits: Array.isArray(db.settings.baseUnits) ? db.settings.baseUnits : DEFAULT_BASE_UNITS,
+      categories: Array.isArray(db.settings.categories) ? db.settings.categories : [],
+      baseUnits: Array.isArray(db.settings.baseUnits) ? db.settings.baseUnits : [],
     });
   }
 
@@ -1056,14 +1056,14 @@ module.exports = async function handler(req, res) {
     persistSettingsToPg(db.settings).catch(() => {});
     return res.status(200).json({
       usdToKhr: db.settings.usdToKhr,
-      categories: db.settings.categories || DEFAULT_CATEGORIES,
-      baseUnits: db.settings.baseUnits || DEFAULT_BASE_UNITS,
+      categories: db.settings.categories || [],
+      baseUnits: db.settings.baseUnits || [],
     });
   }
 
   // ==================== UOM CONFIGURATION ENDPOINTS ====================
   if (pathname === '/api/uom' && req.method === 'GET') {
-    if (!Array.isArray(db.uomConfigs)) db.uomConfigs = [...DEFAULT_UOM_CONFIGS];
+    if (!Array.isArray(db.uomConfigs)) db.uomConfigs = [];
     return res.status(200).json(db.uomConfigs);
   }
 
@@ -1071,7 +1071,7 @@ module.exports = async function handler(req, res) {
     const body = await readBody(req);
     const name = String(body.name || '').trim();
     if (!name) return res.status(400).json({ error: 'UOM name is required' });
-    if (!Array.isArray(db.uomConfigs)) db.uomConfigs = [...DEFAULT_UOM_CONFIGS];
+    if (!Array.isArray(db.uomConfigs)) db.uomConfigs = [];
     const created = {
       id: body.id ? String(body.id).trim() : `uom-${Date.now()}`,
       name,
