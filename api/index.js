@@ -48,6 +48,31 @@ function wholesaleUsd(body, ccy, rate, fallback) {
   return null;
 }
 
+const DEFAULT_CATEGORIES = [
+  'General',
+  'Beverages',
+  'Food & Snacks',
+  'Groceries',
+  'Household',
+  'Personal Care',
+  'Dairy',
+  'Bakery',
+];
+
+const DEFAULT_BASE_UNITS = [
+  'Piece',
+  'Can',
+  'Bottle',
+  'Box',
+  'Pack',
+  'Bag',
+  'Cup',
+  'Pair',
+  'Set',
+  'Kg',
+  'Litre',
+];
+
 const DEFAULT_UOM_CONFIGS = [
   { id: 'uom-case-24', name: 'Case of 24', baseUnit: 'Can', caseUnitName: 'Case', caseQty: 24, description: 'Standard 24-can beverage or grocery case' }
 ];
@@ -58,6 +83,8 @@ function getDefaultDb() {
     schema: DB_SCHEMA,
     settings: {
       usdToKhr: roundKhr(Number(process.env.DEFAULT_USD_TO_KHR || 4100)),
+      categories: [...DEFAULT_CATEGORIES],
+      baseUnits: [...DEFAULT_BASE_UNITS],
     },
     uomConfigs: DEFAULT_UOM_CONFIGS,
     products: [],
@@ -117,9 +144,13 @@ async function initPostgres() {
         CREATE TABLE IF NOT EXISTS app_settings (
           id TEXT PRIMARY KEY,
           usd_to_khr INT NOT NULL DEFAULT 4100,
+          categories_json TEXT,
+          base_units_json TEXT,
           updated_at_ms BIGINT NOT NULL
         );
       `);
+      await client.query(`ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS categories_json TEXT;`).catch(() => {});
+      await client.query(`ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS base_units_json TEXT;`).catch(() => {});
 
       // 2. Users
       await client.query(`
@@ -236,7 +267,20 @@ async function initPostgres() {
       const db = loadDbSync();
       const settingsRow = await client.query('SELECT * FROM app_settings WHERE id = $1', ['default']);
       if (settingsRow.rows.length > 0) {
-        db.settings.usdToKhr = Number(settingsRow.rows[0].usd_to_khr || 4100);
+        const row = settingsRow.rows[0];
+        db.settings.usdToKhr = Number(row.usd_to_khr || 4100);
+        if (row.categories_json) {
+          try {
+            const parsedCats = JSON.parse(row.categories_json);
+            if (Array.isArray(parsedCats) && parsedCats.length > 0) db.settings.categories = parsedCats;
+          } catch (_) {}
+        }
+        if (row.base_units_json) {
+          try {
+            const parsedUnits = JSON.parse(row.base_units_json);
+            if (Array.isArray(parsedUnits) && parsedUnits.length > 0) db.settings.baseUnits = parsedUnits;
+          } catch (_) {}
+        }
       }
 
       const uomRows = await client.query('SELECT * FROM uom_configs ORDER BY created_at_ms ASC');
@@ -448,6 +492,32 @@ async function persistUomToPg(u, isDelete = false) {
     }
   } catch (err) {
     console.warn('Postgres persistUom warning:', err.message);
+  }
+}
+
+async function persistSettingsToPg(s) {
+  const pool = getPool();
+  if (!pool || !pgReady) return;
+  try {
+    const safeSchema = DB_SCHEMA.replace(/[^a-zA-Z0-9_]/g, '');
+    await pool.query(
+      `INSERT INTO "${safeSchema}".app_settings (id, usd_to_khr, categories_json, base_units_json, updated_at_ms)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (id) DO UPDATE SET
+         usd_to_khr = EXCLUDED.usd_to_khr,
+         categories_json = COALESCE(EXCLUDED.categories_json, "${safeSchema}".app_settings.categories_json),
+         base_units_json = COALESCE(EXCLUDED.base_units_json, "${safeSchema}".app_settings.base_units_json),
+         updated_at_ms = EXCLUDED.updated_at_ms`,
+      [
+        'default',
+        roundKhr(Number(s.usdToKhr) || 4100),
+        Array.isArray(s.categories) ? JSON.stringify(s.categories) : null,
+        Array.isArray(s.baseUnits) ? JSON.stringify(s.baseUnits) : null,
+        Date.now(),
+      ]
+    );
+  } catch (err) {
+    console.warn('Postgres persistSettings warning:', err.message);
   }
 }
 
@@ -964,15 +1034,31 @@ module.exports = async function handler(req, res) {
 
   // ==================== 2. SETTINGS ENDPOINTS ====================
   if (pathname === '/api/settings' && req.method === 'GET') {
-    return res.status(200).json({ usdToKhr: roundKhr(db.settings.usdToKhr || 4100) });
+    return res.status(200).json({
+      usdToKhr: roundKhr(db.settings.usdToKhr || 4100),
+      categories: Array.isArray(db.settings.categories) ? db.settings.categories : DEFAULT_CATEGORIES,
+      baseUnits: Array.isArray(db.settings.baseUnits) ? db.settings.baseUnits : DEFAULT_BASE_UNITS,
+    });
   }
 
   if ((pathname === '/api/settings/rate' || pathname === '/api/settings' || pathname === '/settings/rate' || pathname === '/settings') && req.method === 'PUT') {
     const body = await readBody(req);
-    const nextRate = roundKhr(Number(body.usdToKhr) || 4100);
-    db.settings.usdToKhr = nextRate;
+    if (body.usdToKhr !== undefined) {
+      db.settings.usdToKhr = roundKhr(Number(body.usdToKhr) || 4100);
+    }
+    if (Array.isArray(body.categories)) {
+      db.settings.categories = Array.from(new Set(body.categories.map((c) => String(c).trim()).filter(Boolean)));
+    }
+    if (Array.isArray(body.baseUnits)) {
+      db.settings.baseUnits = Array.from(new Set(body.baseUnits.map((u) => String(u).trim()).filter(Boolean)));
+    }
     saveDb(db);
-    return res.status(200).json({ usdToKhr: nextRate });
+    persistSettingsToPg(db.settings).catch(() => {});
+    return res.status(200).json({
+      usdToKhr: db.settings.usdToKhr,
+      categories: db.settings.categories || DEFAULT_CATEGORIES,
+      baseUnits: db.settings.baseUnits || DEFAULT_BASE_UNITS,
+    });
   }
 
   // ==================== UOM CONFIGURATION ENDPOINTS ====================
