@@ -56,6 +56,11 @@ public class SalesService {
     s.paidCurrency = in.paidCurrency();
     s.rateSnapshot = rate;
     s.status = "COMPLETED";
+    s.tenderAmount = in.tenderAmount();
+    s.tenderCurrency = in.tenderCurrency();
+    s.changeText = in.changeText();
+    s.changeKhr = in.changeKhr();
+    s.changeUsd = in.changeUsd();
     boolean wholesale = "WHOLESALE".equalsIgnoreCase(in.priceTier());
     s.priceTier = wholesale ? "WHOLESALE" : "RETAIL";
     BigDecimal total = BigDecimal.ZERO;

@@ -28,6 +28,21 @@ public class Sale {
   @Column(name = "paid_currency")
   public String paidCurrency;
 
+  @Column(name = "tender_amount")
+  public BigDecimal tenderAmount;
+
+  @Column(name = "tender_currency")
+  public String tenderCurrency;
+
+  @Column(name = "change_text")
+  public String changeText;
+
+  @Column(name = "change_khr")
+  public BigDecimal changeKhr;
+
+  @Column(name = "change_usd")
+  public BigDecimal changeUsd;
+
   public String status;
 
   /** RETAIL or WHOLESALE — which price list this sale was charged at. */
