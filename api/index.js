@@ -1339,10 +1339,34 @@ module.exports = async function handler(req, res) {
       .json({ error: 'Cloud image bucket not configured; keeping local device URI' });
   }
 
-  const productMatch = pathname.match(/^\/api\/products\/([^/]+)$/);
+  const productMatch = pathname.match(/^\/api\/products\/([^/]+)\/?$/);
   if (productMatch) {
-    const id = productMatch[1];
+    const id = decodeURIComponent(productMatch[1]);
     const idx = db.products.findIndex((p) => p.id === id && !p.archived);
+
+    if (req.method === 'DELETE') {
+      if (idx !== -1) {
+        db.products[idx].archived = true;
+        pushEvent(
+          db,
+          'PRODUCT_DELETED',
+          `Product Deleted: ${db.products[idx].name}`,
+          `បានលុបទំនិញ៖ ${db.products[idx].name}`,
+          `${db.products[idx].name} removed from inventory`,
+          { clientId, productId: id }
+        );
+        saveDb(db);
+        persistProductToPg(db.products[idx]).catch(() => {});
+      } else {
+        const pool = getPool();
+        if (pool && pgReady) {
+          const safeSchema = DB_SCHEMA.replace(/[^a-zA-Z0-9_]/g, '');
+          pool.query(`UPDATE "${safeSchema}".products SET archived = true WHERE id = $1`, [id]).catch(() => {});
+        }
+      }
+      return res.status(200).json({ success: true, id, archived: true });
+    }
+
     if (idx === -1) return res.status(404).json({ error: 'Product not found' });
 
     if (req.method === 'GET') {
@@ -1407,13 +1431,6 @@ module.exports = async function handler(req, res) {
       saveDb(db);
       persistProductToPg(db.products[idx]).catch(() => {});
       return res.status(200).json(db.products[idx]);
-    }
-
-    if (req.method === 'DELETE') {
-      db.products[idx].archived = true;
-      saveDb(db);
-      persistProductToPg(db.products[idx]).catch(() => {});
-      return res.status(204).end();
     }
   }
 

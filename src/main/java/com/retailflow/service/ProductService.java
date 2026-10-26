@@ -235,9 +235,18 @@ public class ProductService {
 
   @Transactional
   public void archive(UUID id) {
-    Product p = get(id);
-    p.archived = true;
-    repo.save(p);
+    Product p = repo.findById(id).orElse(null);
+    if (p != null && !p.archived) {
+      p.archived = true;
+      repo.save(p);
+      events.push(
+          "PRODUCT_DELETED",
+          "Product Deleted: " + p.name,
+          "បានលុបទំនិញ៖ " + p.name,
+          "Removed from catalog",
+          p.id.toString(),
+          null);
+    }
   }
 
   /**
