@@ -4,6 +4,8 @@ server:
   shutdown: graceful
 
 spring:
+  config:
+    import: optional:file:./.env.sandbox.properties,optional:file:./backend/.env.sandbox.properties
   application:
     name: retailflow-backend
 
@@ -64,3 +66,9 @@ retailflow:
       secret-access-key: ${R2_SECRET_ACCESS_KEY:}
       bucket: ${R2_BUCKET:}
       public-url: ${R2_PUBLIC_URL:}
+
+payway:
+  sandbox:
+    enabled: ${PAYWAY_SANDBOX_ENABLED:false}
+    merchant-id: ${PAYWAY_MERCHANT_ID}
+    api-key: ${PAYWAY_API_KEY}

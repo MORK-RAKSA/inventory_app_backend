@@ -44,6 +44,11 @@ public class SalesService {
     BigDecimal rate = settings.findById(1L).orElseThrow().usdToKhr;
     Sale s = new Sale();
     s.id = UUID.randomUUID();
+    var attrs =
+        (org.springframework.web.context.request.ServletRequestAttributes)
+            org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+    if (attrs != null && attrs.getRequest().getAttribute("currentUser") instanceof AppUser cashier)
+      s.cashierName = cashier.fullName == null ? cashier.username : cashier.fullName;
     s.idempotencyKey = in.idempotencyKey();
     s.paidCurrency = in.paidCurrency();
     s.rateSnapshot = rate;
@@ -61,6 +66,9 @@ public class SalesService {
           products
               .findLocked(entry.getKey())
               .orElseThrow(() -> new IllegalArgumentException("Unknown product"));
+      if (p.expirationDate != null
+          && p.expirationDate.isBefore(LocalDate.now(ZoneId.of("Asia/Phnom_Penh"))))
+        throw new IllegalArgumentException("Expired product cannot be sold: " + p.name);
       int qty = entry.getValue();
       if (p.archived || p.stock < qty)
         throw new IllegalArgumentException("Insufficient stock: " + p.name);

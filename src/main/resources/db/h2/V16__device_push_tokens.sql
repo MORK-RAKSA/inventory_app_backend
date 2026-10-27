@@ -1,0 +1,1 @@
+CREATE TABLE device_push_tokens (token VARCHAR(200) PRIMARY KEY, user_id VARCHAR(36) NOT NULL REFERENCES app_users(id) ON DELETE CASCADE, client_id VARCHAR(100) NOT NULL);

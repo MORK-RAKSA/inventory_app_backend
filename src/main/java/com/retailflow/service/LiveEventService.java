@@ -29,6 +29,8 @@ public class LiveEventService {
       String barcode,
       String scanMode) {}
 
+  private final org.springframework.context.ApplicationEventPublisher publisher;
+
   private final Deque<LiveEvent> events = new ConcurrentLinkedDeque<>();
 
   private static String currentClientId() {
@@ -89,6 +91,7 @@ public class LiveEventService {
 
   private void append(LiveEvent ev) {
     events.addFirst(ev);
+    publisher.publishEvent(ev);
     while (events.size() > 60) {
       events.removeLast();
     }

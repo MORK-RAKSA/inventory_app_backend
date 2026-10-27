@@ -43,6 +43,9 @@ public class Sale {
   @Column(name = "change_usd")
   public BigDecimal changeUsd;
 
+  @Column(name = "cashier_name")
+  public String cashierName;
+
   public String status;
 
   /** RETAIL or WHOLESALE — which price list this sale was charged at. */
