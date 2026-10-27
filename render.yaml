@@ -2,6 +2,7 @@ services:
   - type: web
     name: retailflow-spring-api
     runtime: docker
+    autoDeployTrigger: "off"
     plan: starter
     disk:
       name: retailflow-data

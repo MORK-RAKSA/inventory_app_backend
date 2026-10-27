@@ -1,0 +1,90 @@
+name: Backend CI and Render deployment
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Test and verify Docker startup
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Validate formatting, test, and package
+        run: bash ./gradlew --no-daemon spotlessCheck test bootJar
+      - name: Build deployment image
+        run: docker build --tag retailflow-ci .
+      - name: Verify H2 application startup
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --detach --name retailflow-ci --publish 127.0.0.1:18080:8080 \
+            --env SPRING_PROFILES_ACTIVE=prod retailflow-ci
+          trap 'docker logs retailflow-ci; docker rm -f retailflow-ci >/dev/null' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail --max-time 3 http://127.0.0.1:18080/api/health > /tmp/health.json; then
+              python3 -c 'import json; d=json.load(open("/tmp/health.json")); assert d["status"] == "UP" and d["database"] == "H2"'
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Backend failed to become healthy.' >&2
+          exit 1
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: build/reports/tests/test/
+          if-no-files-found: ignore
+
+  deploy:
+    name: Request Render deployment
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Deploy the tested commit
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          DEPLOY_COMMIT: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import os, sys, urllib.parse, urllib.request, urllib.error
+          hook = os.environ.get('RENDER_DEPLOY_HOOK_URL', '')
+          parsed = urllib.parse.urlsplit(hook)
+          if parsed.scheme != 'https' or parsed.hostname != 'api.render.com':
+              sys.exit('Set the RENDER_DEPLOY_HOOK_URL repository secret to the Render deploy hook URL.')
+          query = dict(urllib.parse.parse_qsl(parsed.query))
+          query['ref'] = os.environ['DEPLOY_COMMIT']
+          url = urllib.parse.urlunsplit(parsed._replace(query=urllib.parse.urlencode(query)))
+          try:
+              with urllib.request.urlopen(urllib.request.Request(url, data=b'', method='POST'), timeout=60) as response:
+                  if response.status not in (200, 202):
+                      sys.exit('Unexpected deployment response.')
+                  message = 'Render accepted the deployment request for commit ' + os.environ['DEPLOY_COMMIT'] + '. Check Render for deployment completion.'
+                  print(message)
+                  with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+                      summary.write(message + '\n')
+          except urllib.error.HTTPError as error:
+              sys.exit('Render rejected the deployment request (HTTP ' + str(error.code) + ').')
+          except Exception:
+              sys.exit('Could not confirm the deployment request. Check Render before retrying.')
+          PY
