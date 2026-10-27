@@ -5,15 +5,14 @@ import com.retailflow.entity.*;
 import com.retailflow.repository.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@org.springframework.stereotype.Service
+@Service
+@RequiredArgsConstructor
 public class SettingsService {
   private final SettingsRepository repo;
-
-  public SettingsService(SettingsRepository repo) {
-    this.repo = repo;
-  }
 
   public StoreSettings get() {
     return repo.findById(1L).orElseThrow();

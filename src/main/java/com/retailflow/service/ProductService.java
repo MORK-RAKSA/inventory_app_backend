@@ -9,29 +9,19 @@ import com.retailflow.repository.SettingsRepository;
 import com.retailflow.util.MoneyUtil;
 import java.math.*;
 import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-@org.springframework.stereotype.Service
+@Service
+@RequiredArgsConstructor
 public class ProductService {
   private final ProductRepository repo;
   private final StockMovementRepository movements;
   private final SettingsRepository settings;
   private final ImageStorageService images;
   private final LiveEventService events;
-
-  public ProductService(
-      ProductRepository repo,
-      StockMovementRepository movements,
-      SettingsRepository settings,
-      ImageStorageService images,
-      LiveEventService events) {
-    this.repo = repo;
-    this.movements = movements;
-    this.settings = settings;
-    this.images = images;
-    this.events = events;
-  }
 
   public List<Product> list() {
     return repo.findAllByArchivedFalseOrderByNameAsc();

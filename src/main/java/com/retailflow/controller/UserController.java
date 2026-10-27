@@ -7,20 +7,17 @@ import com.retailflow.service.contract.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/users")
+@RequiredArgsConstructor
 public class UserController {
   private final UserRepository repo;
   private final UserService service;
-
-  public UserController(UserRepository repo, UserService service) {
-    this.repo = repo;
-    this.service = service;
-  }
 
   private void admin(HttpServletRequest request) {
     AppUser current = (AppUser) request.getAttribute("currentUser");

@@ -6,16 +6,14 @@ import com.retailflow.repository.*;
 import com.retailflow.service.*;
 import jakarta.validation.Valid;
 import java.util.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/settings")
+@RequiredArgsConstructor
 public class SettingsController {
   private final SettingsService service;
-
-  public SettingsController(SettingsService service) {
-    this.service = service;
-  }
 
   @GetMapping
   public StoreSettings get() {

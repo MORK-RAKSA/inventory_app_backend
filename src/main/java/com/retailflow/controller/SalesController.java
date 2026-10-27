@@ -7,16 +7,14 @@ import com.retailflow.service.*;
 import jakarta.validation.Valid;
 import java.time.OffsetDateTime;
 import java.util.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/sales")
+@RequiredArgsConstructor
 public class SalesController {
   private final SalesService service;
-
-  public SalesController(SalesService service) {
-    this.service = service;
-  }
 
   @GetMapping
   public List<Sale> list(

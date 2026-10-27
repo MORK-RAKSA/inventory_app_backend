@@ -1,19 +1,14 @@
 package com.retailflow.service;
 
+import com.retailflow.config.R2StorageClient;
 import java.io.IOException;
-import java.net.URI;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
@@ -22,45 +17,16 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
  * configured.
  */
 @Service
+@RequiredArgsConstructor
 public class ImageStorageService {
   private static final long MAX_BYTES = 5L * 1024 * 1024;
 
   public record Stored(String key, String url) {}
 
-  private final String bucket;
-  private final String publicUrl;
-  private final S3Client client;
-
-  public ImageStorageService(
-      @Value("${retailflow.storage.r2.account-id:}") String accountId,
-      @Value("${retailflow.storage.r2.access-key-id:}") String accessKey,
-      @Value("${retailflow.storage.r2.secret-access-key:}") String secretKey,
-      @Value("${retailflow.storage.r2.bucket:}") String bucket,
-      @Value("${retailflow.storage.r2.public-url:}") String publicUrl) {
-    boolean configured =
-        !accountId.isBlank()
-            && !accessKey.isBlank()
-            && !secretKey.isBlank()
-            && !bucket.isBlank()
-            && !publicUrl.isBlank();
-    this.bucket = bucket;
-    this.publicUrl = publicUrl.replaceAll("/+$", "");
-    this.client =
-        !configured
-            ? null
-            : S3Client.builder()
-                .endpointOverride(URI.create("https://" + accountId + ".r2.cloudflarestorage.com"))
-                .region(Region.of("auto"))
-                .credentialsProvider(
-                    StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(accessKey, secretKey)))
-                .serviceConfiguration(
-                    S3Configuration.builder().pathStyleAccessEnabled(true).build())
-                .build();
-  }
+  private final R2StorageClient storage;
 
   public boolean enabled() {
-    return client != null;
+    return storage.getClient() != null;
   }
 
   public Stored upload(UUID productId, MultipartFile file) {
@@ -76,15 +42,17 @@ public class ImageStorageService {
       if (type == null)
         throw new IllegalArgumentException("Only JPEG, PNG or WebP images are allowed");
       String key = "products/" + productId + "/" + UUID.randomUUID() + "." + type[1];
-      client.putObject(
-          PutObjectRequest.builder()
-              .bucket(bucket)
-              .key(key)
-              .contentType(type[0])
-              .cacheControl("public, max-age=31536000, immutable")
-              .build(),
-          RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
-      return new Stored(key, publicUrl + "/" + key);
+      storage
+          .getClient()
+          .putObject(
+              PutObjectRequest.builder()
+                  .bucket(storage.getBucket())
+                  .key(key)
+                  .contentType(type[0])
+                  .cacheControl("public, max-age=31536000, immutable")
+                  .build(),
+              RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+      return new Stored(key, storage.getPublicUrl() + "/" + key);
     } catch (IOException e) {
       throw new ResponseStatusException(
           HttpStatus.BAD_GATEWAY, "Could not read or store the image", e);
@@ -95,7 +63,9 @@ public class ImageStorageService {
   public void delete(String key) {
     if (!enabled() || key == null || key.isBlank()) return;
     try {
-      client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+      storage
+          .getClient()
+          .deleteObject(DeleteObjectRequest.builder().bucket(storage.getBucket()).key(key).build());
     } catch (RuntimeException ignored) {
       // orphaned objects are harmless
     }

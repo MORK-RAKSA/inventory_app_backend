@@ -4,12 +4,14 @@ import com.retailflow.dto.UserCreateRequest;
 import com.retailflow.entity.AppUser;
 import com.retailflow.repository.UserRepository;
 import com.retailflow.service.contract.UserService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class AdminBootstrap implements ApplicationRunner {
   private final UserService service;
   private final UserRepository repo;
@@ -25,11 +27,6 @@ public class AdminBootstrap implements ApplicationRunner {
 
   @Value("${BOOTSTRAP_ADMIN_PASSWORD:}")
   private String password;
-
-  public AdminBootstrap(UserService service, UserRepository repo) {
-    this.service = service;
-    this.repo = repo;
-  }
 
   @Override
   public void run(ApplicationArguments args) {

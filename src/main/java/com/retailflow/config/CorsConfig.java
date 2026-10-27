@@ -46,7 +46,8 @@ public class CorsConfig implements WebMvcConfigurer {
           .filter(s -> !s.isEmpty())
           .forEach(patterns::add);
     }
-    // Always permit localhost dev (any port), 127.0.0.1, Vercel deployments, Render, Expo, and wildcards
+    // Always permit localhost dev (any port), 127.0.0.1, Vercel deployments, Render, Expo, and
+    // wildcards
     patterns.add("http://localhost:[*]");
     patterns.add("http://localhost:*");
     patterns.add("http://127.0.0.1:[*]");

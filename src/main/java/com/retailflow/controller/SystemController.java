@@ -6,19 +6,16 @@ import com.retailflow.service.LiveEventService;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class SystemController {
   private final LiveEventService events;
   private final ProductRepository products;
-
-  public SystemController(LiveEventService events, ProductRepository products) {
-    this.events = events;
-    this.products = products;
-  }
 
   @GetMapping("/health")
   public Map<String, Object> health() {

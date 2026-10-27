@@ -3,16 +3,14 @@ package com.retailflow.controller;
 import com.retailflow.dto.*;
 import com.retailflow.service.*;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/inventory")
+@RequiredArgsConstructor
 public class InventoryController {
   private final ProductService service;
-
-  public InventoryController(ProductService service) {
-    this.service = service;
-  }
 
   /**
    * All-or-nothing batch save: restock existing products and create new ones in one transaction.

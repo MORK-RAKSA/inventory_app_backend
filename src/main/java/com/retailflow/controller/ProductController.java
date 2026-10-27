@@ -6,6 +6,7 @@ import com.retailflow.repository.*;
 import com.retailflow.service.*;
 import jakarta.validation.Valid;
 import java.util.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -13,12 +14,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/products")
+@RequiredArgsConstructor
 public class ProductController {
   private final ProductService service;
-
-  public ProductController(ProductService service) {
-    this.service = service;
-  }
 
   @GetMapping
   public List<Product> list() {

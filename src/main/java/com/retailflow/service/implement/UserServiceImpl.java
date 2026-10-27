@@ -11,6 +11,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,13 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
   private final UserRepository repository;
   private final BCryptPasswordEncoder passwords = new BCryptPasswordEncoder(12);
-
-  public UserServiceImpl(UserRepository repository) {
-    this.repository = repository;
-  }
 
   private static String sha256(String s) {
     try {

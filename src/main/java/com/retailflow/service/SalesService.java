@@ -6,25 +6,17 @@ import com.retailflow.repository.*;
 import java.math.*;
 import java.time.*;
 import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@org.springframework.stereotype.Service
+@Service
+@RequiredArgsConstructor
 public class SalesService {
   private final SaleRepository sales;
   private final ProductRepository products;
   private final SettingsRepository settings;
   private final LiveEventService events;
-
-  public SalesService(
-      SaleRepository sales,
-      ProductRepository products,
-      SettingsRepository settings,
-      LiveEventService events) {
-    this.sales = sales;
-    this.products = products;
-    this.settings = settings;
-    this.events = events;
-  }
 
   public List<Sale> list(OffsetDateTime from, OffsetDateTime to) {
     OffsetDateTime start = from == null ? OffsetDateTime.now(ZoneOffset.UTC).minusDays(30) : from;

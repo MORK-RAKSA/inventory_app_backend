@@ -1,6 +1,6 @@
 # RetailFlow — Spring Boot Backend
 
-Java 21 / Spring Boot 3.5.6 / Gradle / PostgreSQL / Flyway, deployed as a Docker image. The Node.js Vercel backend has been removed; Vercel is used only as an `/api` proxy (`vercel.json`).
+Java 21 / Spring Boot 3.5.6 / Gradle / PostgreSQL / Flyway, deployed as a Docker image. Legacy Node.js API handlers also exist in the workspace; they are separate from this Spring application. The root Vercel configuration declares an `/api` proxy to Render.
 
 ## Layout
 
@@ -26,3 +26,11 @@ Users are persisted in `app_users` with username, email, full name, BCrypt passw
 ## Build and hosting
 
 See [DEPLOYMENT.md](DEPLOYMENT.md). Configure all secrets externally; never use the original committed secrets. Gradle compilation and end-to-end integration tests must be run in an environment with the Gradle distribution/dependencies and a test PostgreSQL instance. This refactor is not production-verified.
+
+## Java conventions
+
+- Use Lombok `@RequiredArgsConstructor` with `private final` dependencies for services, controllers, and injectable components. Lombok is configured as a compile-only dependency and annotation processor.
+- Use Jakarta packages for persistence, validation, servlet APIs, and lifecycle annotations. Keep Spring `@Transactional` for transaction options such as `readOnly`.
+- Keep request payloads as Java records with Jakarta validation. Keep business logic in services; UOM writes run in a service transaction.
+- `R2StorageClient` owns optional image storage configuration and closes its SDK client on shutdown.
+- Run `./gradlew spotlessApply test bootJar` to format, test, and package. The focused service tests use mocked repositories; they do not verify PostgreSQL migrations or a live deployment.

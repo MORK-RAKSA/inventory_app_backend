@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.time.Instant;
 import java.util.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
   private final JdbcTemplate db;
   private final UserService users;
@@ -24,11 +26,6 @@ public class AuthController {
   private String recoveryKey;
 
   private static final long ACCESS_SECONDS = 86400, SESSION_SECONDS = 90L * 86400;
-
-  public AuthController(JdbcTemplate db, UserService users) {
-    this.db = db;
-    this.users = users;
-  }
 
   public record Credentials(@NotBlank String username, @NotBlank String password) {}
 
