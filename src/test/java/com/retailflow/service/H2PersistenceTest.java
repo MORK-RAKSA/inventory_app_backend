@@ -25,6 +25,19 @@ class H2PersistenceTest {
             .load();
     flyway.migrate();
     try (var connection = DriverManager.getConnection(url, "sa", "");
+        var statement = connection.createStatement();
+        var admin =
+            statement.executeQuery(
+                "SELECT password_hash, active, role FROM app_users WHERE username='admin'")) {
+      assertThat(admin.next()).isTrue();
+      assertThat(
+              new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder()
+                  .matches("admin1234", admin.getString(1)))
+          .isTrue();
+      assertThat(admin.getBoolean(2)).isTrue();
+      assertThat(admin.getString(3)).isEqualTo("ADMIN");
+    }
+    try (var connection = DriverManager.getConnection(url, "sa", "");
         var statement = connection.createStatement()) {
       statement.executeUpdate(
           "UPDATE store_settings SET usd_to_khr=4200, currency_mode='live' WHERE id=1");

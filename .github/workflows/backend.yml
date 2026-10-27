@@ -1,4 +1,4 @@
-name: Backend CI and Render deployment
+name: Backend CI and artifacts
 
 on:
   pull_request:
@@ -54,37 +54,10 @@ jobs:
           path: build/reports/tests/test/
           if-no-files-found: ignore
 
-  deploy:
-    name: Request Render deployment
-    needs: verify
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    steps:
-      - name: Deploy the tested commit
-        env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-          DEPLOY_COMMIT: ${{ github.sha }}
-        run: |
-          python3 - <<'PY'
-          import os, sys, urllib.parse, urllib.request, urllib.error
-          hook = os.environ.get('RENDER_DEPLOY_HOOK_URL', '')
-          parsed = urllib.parse.urlsplit(hook)
-          if parsed.scheme != 'https' or parsed.hostname != 'api.render.com':
-              sys.exit('Set the RENDER_DEPLOY_HOOK_URL repository secret to the Render deploy hook URL.')
-          query = dict(urllib.parse.parse_qsl(parsed.query))
-          query['ref'] = os.environ['DEPLOY_COMMIT']
-          url = urllib.parse.urlunsplit(parsed._replace(query=urllib.parse.urlencode(query)))
-          try:
-              with urllib.request.urlopen(urllib.request.Request(url, data=b'', method='POST'), timeout=60) as response:
-                  if response.status not in (200, 202):
-                      sys.exit('Unexpected deployment response.')
-                  message = 'Render accepted the deployment request for commit ' + os.environ['DEPLOY_COMMIT'] + '. Check Render for deployment completion.'
-                  print(message)
-                  with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-                      summary.write(message + '\n')
-          except urllib.error.HTTPError as error:
-              sys.exit('Render rejected the deployment request (HTTP ' + str(error.code) + ').')
-          except Exception:
-              sys.exit('Could not confirm the deployment request. Check Render before retrying.')
-          PY
+      - name: Upload verified backend JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: retailflow-backend-${{ github.sha }}
+          path: build/libs/app.jar
+          if-no-files-found: error
+          retention-days: 14
