@@ -20,6 +20,7 @@ spring:
     password: ${H2_PASSWORD:}
     driver-class-name: org.h2.Driver
     hikari:
+      schema: ${DB_SCHEMA:public}
       maximum-pool-size: ${DB_POOL_SIZE:5}
       minimum-idle: 1
       connection-timeout: 30000
