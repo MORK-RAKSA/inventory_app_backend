@@ -10,13 +10,13 @@ public class UomConfig {
   public String name;
 
   @Column(name = "base_unit")
-  public String baseUnit = "Piece";
+  public String baseUnit;
 
   @Column(name = "case_unit_name")
-  public String caseUnitName = "Case";
+  public String caseUnitName;
 
   @Column(name = "case_qty")
-  public int caseQty = 24;
+  public int caseQty = 1;
 
   public String description;
 

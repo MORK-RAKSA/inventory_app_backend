@@ -30,11 +30,9 @@ public class UomService {
         new UomConfig(
             id,
             in.name().trim(),
-            in.baseUnit() == null || in.baseUnit().isBlank() ? "Piece" : in.baseUnit().trim(),
-            in.caseUnitName() == null || in.caseUnitName().isBlank()
-                ? "Case"
-                : in.caseUnitName().trim(),
-            in.caseQty() == null || in.caseQty() < 1 ? 24 : in.caseQty(),
+            in.baseUnit().trim(),
+            in.caseUnitName().trim(),
+            in.caseQty(),
             in.description() == null ? "" : in.description().trim());
     return repo.save(cfg);
   }

@@ -6,9 +6,9 @@ import java.math.BigDecimal;
 public record ProductInput(
     @NotBlank String name,
     String barcode,
-    String category,
+    @NotBlank String category,
     @NotNull @DecimalMin("0") BigDecimal price,
-    String currency,
+    @NotBlank String currency,
     @Min(0) int stock,
     @Min(0) int lowStockThreshold,
     java.time.LocalDate expirationDate,
@@ -20,9 +20,4 @@ public record ProductInput(
     @Min(1) Integer wholesaleMinQty,
     String baseUnit,
     String caseUnitName,
-    @Min(1) Integer caseQty) {
-  public ProductInput {
-    if (category == null || category.isBlank()) category = "General";
-    if (currency == null || currency.isBlank()) currency = "KHR";
-  }
-}
+    @Min(1) Integer caseQty) {}

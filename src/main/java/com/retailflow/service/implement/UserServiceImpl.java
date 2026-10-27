@@ -4,7 +4,6 @@ import com.retailflow.dto.UserCreateRequest;
 import com.retailflow.entity.AppUser;
 import com.retailflow.repository.UserRepository;
 import com.retailflow.service.contract.UserService;
-import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -31,42 +30,6 @@ public class UserServiceImpl implements UserService {
               MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8)));
     } catch (NoSuchAlgorithmException e) {
       return s;
-    }
-  }
-
-  @PostConstruct
-  @Transactional
-  public void initDefaultUsers() {
-    try {
-      if (repository.count() == 0) {
-        // Seed default admin user
-        AppUser admin = new AppUser();
-        admin.id = "usr-admin-default";
-        admin.username = "admin";
-        admin.email = "admin@retailflow.local";
-        admin.fullName = "System Administrator";
-        admin.role = "ADMIN";
-        admin.passwordHash = passwords.encode("admin1234");
-        admin.active = true;
-        admin.createdAt = LocalDateTime.now();
-        admin.updatedAt = admin.createdAt;
-        repository.save(admin);
-
-        // Seed default store owner
-        AppUser owner = new AppUser();
-        owner.id = "usr-morkraksa-default";
-        owner.username = "morkraksa";
-        owner.email = "morkraksa@retailflow.local";
-        owner.fullName = "Mork Raksa";
-        owner.role = "ADMIN";
-        owner.passwordHash = passwords.encode("admin1234");
-        owner.active = true;
-        owner.createdAt = LocalDateTime.now();
-        owner.updatedAt = owner.createdAt;
-        repository.save(owner);
-      }
-    } catch (Exception e) {
-      // Table may still be initializing or migrations running
     }
   }
 
@@ -99,23 +62,6 @@ public class UserServiceImpl implements UserService {
     }
     String uName = username.trim();
     AppUser u = repository.findByUsernameIgnoreCase(uName).orElse(null);
-
-    // Fallback seed if DB was empty when user tries to log in with default credentials
-    if (u == null && ("admin".equalsIgnoreCase(uName) || "morkraksa".equalsIgnoreCase(uName))) {
-      if ("admin1234".equals(password) || "password".equals(password) || "admin".equals(password)) {
-        AppUser fallback = new AppUser();
-        fallback.id = UUID.randomUUID().toString();
-        fallback.username = uName.toLowerCase();
-        fallback.email = uName.toLowerCase() + "@retailflow.local";
-        fallback.fullName = "admin".equalsIgnoreCase(uName) ? "System Administrator" : "Mork Raksa";
-        fallback.role = "ADMIN";
-        fallback.passwordHash = passwords.encode(password);
-        fallback.active = true;
-        fallback.createdAt = LocalDateTime.now();
-        fallback.updatedAt = fallback.createdAt;
-        return repository.save(fallback);
-      }
-    }
 
     if (u == null || !u.active) {
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");

@@ -21,7 +21,7 @@ public class SystemController {
   public Map<String, Object> health() {
     return Map.of(
         "status", "UP",
-        "database", "PostgreSQL",
+        "database", "H2",
         "app", "RetailFlow Spring Boot Backend",
         "timestamp", OffsetDateTime.now(ZoneOffset.UTC).toString());
   }

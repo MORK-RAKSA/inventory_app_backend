@@ -27,6 +27,9 @@ public class StoreSettings {
   @Column(name = "updated_at")
   public java.time.OffsetDateTime updatedAt;
 
+  @Column(name = "currency_mode")
+  public String currencyMode;
+
   protected StoreSettings() {}
 
   @JsonProperty("categories")

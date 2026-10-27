@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS uom_configs (
   case_unit_name varchar(100) NOT NULL,
   case_qty integer NOT NULL CHECK (case_qty > 0),
   description text,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamp with time zone NOT NULL DEFAULT now()
 );
 
 ALTER TABLE products ADD COLUMN IF NOT EXISTS base_unit varchar(100) DEFAULT 'Piece';

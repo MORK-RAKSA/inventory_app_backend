@@ -1,6 +1,6 @@
 # RetailFlow — Spring Boot Backend
 
-Java 21 / Spring Boot 3.5.6 / Gradle / PostgreSQL / Flyway, deployed as a Docker image. Legacy Node.js API handlers also exist in the workspace; they are separate from this Spring application. The root Vercel configuration declares an `/api` proxy to Render.
+Java 21 / Spring Boot 3.5.6 / Gradle / persistent H2 / Flyway, deployed as a Docker image. Legacy Node.js API handlers also exist in the workspace; they are separate from this Spring application. The root Vercel configuration declares an `/api` proxy to Render.
 
 ## Layout
 
@@ -24,6 +24,8 @@ Users are persisted in `app_users` with username, email, full name, BCrypt passw
 **No public signup endpoint.** API paths: POST `/api/auth/login`, POST `/api/auth/refresh`, POST `/api/auth/logout`, GET `/api/users/me`, GET `/api/users` (admin), POST `/api/users` (admin). Legacy product, inventory, sales, settings and UOM endpoints retain their paths.
 
 ## Build and hosting
+
+See [H2_DEPLOYMENT.md](H2_DEPLOYMENT.md) for the current database and Render disk setup. Prisma data is not automatically migrated.
 
 See [DEPLOYMENT.md](DEPLOYMENT.md). Configure all secrets externally; never use the original committed secrets. Gradle compilation and end-to-end integration tests must be run in an environment with the Gradle distribution/dependencies and a test PostgreSQL instance. This refactor is not production-verified.
 

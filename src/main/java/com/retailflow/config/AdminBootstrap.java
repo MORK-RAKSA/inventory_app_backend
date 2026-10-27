@@ -31,7 +31,7 @@ public class AdminBootstrap implements ApplicationRunner {
   @Override
   public void run(ApplicationArguments args) {
     if (username.isBlank() || email.isBlank() || fullName.isBlank() || password.isBlank()) return;
-    if (repo.count() > 0) return;
+    if (repo.findAll().stream().anyMatch(u -> u.active && "ADMIN".equals(u.role))) return;
     if (password.length() < 12)
       throw new IllegalStateException("Bootstrap admin password must be at least 12 characters");
     AppUser u = service.create(new UserCreateRequest(username, email, fullName, password));
